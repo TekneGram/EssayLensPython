@@ -1,0 +1,8 @@
+huggingface_hub
+platformdirs
+requests
+spacy
+torch
+transformers
+psutil
+python-docx
