@@ -271,6 +271,253 @@ class SelectModelIntegrationTests(unittest.TestCase):
             finally:
                 os.chdir(prev_cwd)
 
+    def test_download_action_shows_only_not_downloaded_models(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prev_cwd = Path.cwd()
+            os.chdir(tmpdir)
+            try:
+                appdata = Path(".appdata")
+                server_bin = appdata / "build" / "llama.cpp" / "bin" / "llama-server"
+                models_dir = appdata / "models"
+                server_bin.parent.mkdir(parents=True, exist_ok=True)
+                models_dir.mkdir(parents=True, exist_ok=True)
+                server_bin.write_text("bin", encoding="utf-8")
+                # Mark first model as downloaded.
+                (models_dir / "Qwen3-4B-Instruct-2507-Q8_0.gguf").write_text("x", encoding="utf-8")
+
+                app_cfg = AppConfig(
+                    assessment_paths=AssessmentPathsConfig.from_strings(
+                        input_folder="Assessment/in",
+                        output_folder="Assessment/out",
+                        explained_folder="Assessment/explained",
+                    ),
+                    llm_config=LlmConfig.from_strings(
+                        llama_server_model="initial",
+                        llama_model_key="initial",
+                        llama_model_display_name="Initial",
+                        llama_model_alias="Initial",
+                        llama_model_family="instruct",
+                    ),
+                    llm_server=LlmServerConfig.from_strings(
+                        llama_backend="server",
+                        llama_server_path=server_bin,
+                        llama_server_url="http://127.0.0.1:8080/v1/chat/completions",
+                        llama_n_ctx=4096,
+                        llama_host="127.0.0.1",
+                        llama_port=8080,
+                        llama_n_threads=None,
+                        llama_n_gpu_layers=99,
+                        llama_n_batch=None,
+                        llama_seed=None,
+                        llama_rope_freq_base=None,
+                        llama_rope_freq_scale=None,
+                        llama_use_jinja=True,
+                        llama_cache_prompt=True,
+                        llama_flash_attn=True,
+                    ),
+                    llm_request=LlmRequestConfig.from_values(
+                        default_max_tokens=1024,
+                        default_temperature=0.2,
+                        default_top_p=0.95,
+                        default_top_k=40,
+                        default_repeat_penalty=1.1,
+                        default_seed=None,
+                        default_stop=None,
+                        default_response_format=None,
+                        default_stream=False,
+                    ),
+                )
+
+                captured_specs: dict[str, list[str]] = {}
+
+                def _capture_choice(specs, recommended, persisted_key, hw, label):
+                    captured_specs["keys"] = [s.key for s in specs]
+                    return specs[0]
+
+                with patch(
+                    "app.select_model.get_hardware_info",
+                    return_value=HardwareInfo(
+                        total_ram_gb=64.0,
+                        cpu_count=8,
+                        cuda_vram_gb=16.0,
+                        is_mps=False,
+                    ),
+                ), patch("app.select_model.prompt_initial_action", return_value="download"), patch(
+                    "app.select_model.prompt_model_choice_from_list",
+                    side_effect=_capture_choice,
+                ):
+                    select_model_and_update_config(app_cfg)
+
+                self.assertEqual(captured_specs["keys"], ["qwen3_8b_q8"])
+            finally:
+                os.chdir(prev_cwd)
+
+    def test_select_action_shows_only_downloaded_models(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prev_cwd = Path.cwd()
+            os.chdir(tmpdir)
+            try:
+                appdata = Path(".appdata")
+                server_bin = appdata / "build" / "llama.cpp" / "bin" / "llama-server"
+                models_dir = appdata / "models"
+                server_bin.parent.mkdir(parents=True, exist_ok=True)
+                models_dir.mkdir(parents=True, exist_ok=True)
+                server_bin.write_text("bin", encoding="utf-8")
+                # Mark only first model as downloaded.
+                (models_dir / "Qwen3-4B-Instruct-2507-Q8_0.gguf").write_text("x", encoding="utf-8")
+
+                app_cfg = AppConfig(
+                    assessment_paths=AssessmentPathsConfig.from_strings(
+                        input_folder="Assessment/in",
+                        output_folder="Assessment/out",
+                        explained_folder="Assessment/explained",
+                    ),
+                    llm_config=LlmConfig.from_strings(
+                        llama_server_model="initial",
+                        llama_model_key="initial",
+                        llama_model_display_name="Initial",
+                        llama_model_alias="Initial",
+                        llama_model_family="instruct",
+                    ),
+                    llm_server=LlmServerConfig.from_strings(
+                        llama_backend="server",
+                        llama_server_path=server_bin,
+                        llama_server_url="http://127.0.0.1:8080/v1/chat/completions",
+                        llama_n_ctx=4096,
+                        llama_host="127.0.0.1",
+                        llama_port=8080,
+                        llama_n_threads=None,
+                        llama_n_gpu_layers=99,
+                        llama_n_batch=None,
+                        llama_seed=None,
+                        llama_rope_freq_base=None,
+                        llama_rope_freq_scale=None,
+                        llama_use_jinja=True,
+                        llama_cache_prompt=True,
+                        llama_flash_attn=True,
+                    ),
+                    llm_request=LlmRequestConfig.from_values(
+                        default_max_tokens=1024,
+                        default_temperature=0.2,
+                        default_top_p=0.95,
+                        default_top_k=40,
+                        default_repeat_penalty=1.1,
+                        default_seed=None,
+                        default_stop=None,
+                        default_response_format=None,
+                        default_stream=False,
+                    ),
+                )
+
+                captured_specs: dict[str, list[str]] = {}
+
+                def _capture_choice(specs, recommended, persisted_key, hw, label):
+                    captured_specs["keys"] = [s.key for s in specs]
+                    return specs[0]
+
+                with patch(
+                    "app.select_model.get_hardware_info",
+                    return_value=HardwareInfo(
+                        total_ram_gb=64.0,
+                        cpu_count=8,
+                        cuda_vram_gb=16.0,
+                        is_mps=False,
+                    ),
+                ), patch("app.select_model.prompt_initial_action", return_value="select"), patch(
+                    "app.select_model.prompt_model_choice_from_list",
+                    side_effect=_capture_choice,
+                ):
+                    select_model_and_update_config(app_cfg)
+
+                self.assertEqual(captured_specs["keys"], ["qwen3_4b_instruct_q8"])
+            finally:
+                os.chdir(prev_cwd)
+
+    def test_download_action_falls_back_to_installed_if_everything_downloaded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prev_cwd = Path.cwd()
+            os.chdir(tmpdir)
+            try:
+                appdata = Path(".appdata")
+                server_bin = appdata / "build" / "llama.cpp" / "bin" / "llama-server"
+                models_dir = appdata / "models"
+                server_bin.parent.mkdir(parents=True, exist_ok=True)
+                models_dir.mkdir(parents=True, exist_ok=True)
+                server_bin.write_text("bin", encoding="utf-8")
+                # Mark all models as downloaded.
+                (models_dir / "Qwen3-4B-Instruct-2507-Q8_0.gguf").write_text("x", encoding="utf-8")
+                (models_dir / "Qwen3-8B-Q8_0.gguf").write_text("x", encoding="utf-8")
+
+                app_cfg = AppConfig(
+                    assessment_paths=AssessmentPathsConfig.from_strings(
+                        input_folder="Assessment/in",
+                        output_folder="Assessment/out",
+                        explained_folder="Assessment/explained",
+                    ),
+                    llm_config=LlmConfig.from_strings(
+                        llama_server_model="initial",
+                        llama_model_key="initial",
+                        llama_model_display_name="Initial",
+                        llama_model_alias="Initial",
+                        llama_model_family="instruct",
+                    ),
+                    llm_server=LlmServerConfig.from_strings(
+                        llama_backend="server",
+                        llama_server_path=server_bin,
+                        llama_server_url="http://127.0.0.1:8080/v1/chat/completions",
+                        llama_n_ctx=4096,
+                        llama_host="127.0.0.1",
+                        llama_port=8080,
+                        llama_n_threads=None,
+                        llama_n_gpu_layers=99,
+                        llama_n_batch=None,
+                        llama_seed=None,
+                        llama_rope_freq_base=None,
+                        llama_rope_freq_scale=None,
+                        llama_use_jinja=True,
+                        llama_cache_prompt=True,
+                        llama_flash_attn=True,
+                    ),
+                    llm_request=LlmRequestConfig.from_values(
+                        default_max_tokens=1024,
+                        default_temperature=0.2,
+                        default_top_p=0.95,
+                        default_top_k=40,
+                        default_repeat_penalty=1.1,
+                        default_seed=None,
+                        default_stop=None,
+                        default_response_format=None,
+                        default_stream=False,
+                    ),
+                )
+
+                captured_specs: dict[str, list[str]] = {}
+
+                def _capture_choice(specs, recommended, persisted_key, hw, label):
+                    captured_specs["keys"] = [s.key for s in specs]
+                    return specs[0]
+
+                with patch(
+                    "app.select_model.get_hardware_info",
+                    return_value=HardwareInfo(
+                        total_ram_gb=64.0,
+                        cpu_count=8,
+                        cuda_vram_gb=16.0,
+                        is_mps=False,
+                    ),
+                ), patch("app.select_model.prompt_initial_action", return_value="download"), patch(
+                    "app.select_model.prompt_model_choice_from_list",
+                    side_effect=_capture_choice,
+                ):
+                    select_model_and_update_config(app_cfg)
+
+                self.assertEqual(
+                    set(captured_specs["keys"]),
+                    {"qwen3_4b_instruct_q8", "qwen3_8b_q8"},
+                )
+            finally:
+                os.chdir(prev_cwd)
+
 
 if __name__ == "__main__":
     unittest.main()

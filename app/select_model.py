@@ -259,18 +259,24 @@ def select_model_and_update_config(app_cfg: AppConfig) -> AppConfig:
     else:
         action = "download"
 
-    # Based on user's choice, the appropriate model list is selected
-    # User is prompted to choose a model from the list
-    if action == "select" and downloaded_specs:
-        selectable_specs = downloaded_specs
-        label = "Select an installed model"
-    else:
-        selectable_specs = available_for_download
-        label = "Available models for download (metadata only)"
+    # Based on user's choice, select from strict list partitions.
+    if action == "select":
+        if not downloaded_specs:
+            action = "download"
+        else:
+            selectable_specs = downloaded_specs
+            label = "Select an installed model"
 
-    if not selectable_specs:
-        selectable_specs = candidate_specs
-        label = "Available models"
+    if action == "download":
+        if available_for_download:
+            selectable_specs = available_for_download
+            label = "Available models for download (metadata only)"
+        elif downloaded_specs:
+            print("All eligible models are already downloaded. Showing installed models.")
+            selectable_specs = downloaded_specs
+            label = "Select an installed model"
+        else:
+            raise RuntimeError("No eligible models are available to select or download.")
 
     chosen_spec = prompt_model_choice_from_list(
         specs=selectable_specs,
