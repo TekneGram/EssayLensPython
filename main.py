@@ -3,6 +3,7 @@ from utils.terminal_ui import Color, type_print, stage
 from app.settings import build_settings
 from app.select_model import select_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
+from app.container import build_container
 
 def main():
     # Handle environment variables for production vs dev later
@@ -27,6 +28,8 @@ def main():
     type_print(f"Your grading explained folder: {app_cfg.assessment_paths.explained_folder}\n", color=Color.BLUE)
     type_print(f"Mode: {'Single Paragraph' if app_cfg.run_config.single_paragraph_mode else 'Essay'} (Set in run config)\n", color=Color.BLUE)
     type_print(f"Word document author name: {app_cfg.run_config.author} (Set in run config) \n", color=Color.BLUE)
+
+    build_container(app_cfg)
 
 if __name__ == "__main__":
     main()
