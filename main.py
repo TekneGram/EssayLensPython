@@ -1,11 +1,16 @@
 from utils.terminal_ui import Color, type_print, stage
 
 from app.settings import build_settings
+from app.select_model import select_model_and_update_config
 
 def main():
     # Handle environment variables for production vs dev later
     type_print("Building settings", color=Color.BLUE)
     app_cfg = build_settings()
+
+    type_print("Selecting the best model for your system", color=Color.BLUE)
+    app_cfg = select_model_and_update_config(app_cfg)
+
     print(app_cfg)
 
 if __name__ == "__main__":

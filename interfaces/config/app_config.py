@@ -8,7 +8,7 @@ from config.llm_config import LlmConfig
 
 @dataclass(frozen=True)
 class AppConfigShape:
-    assessmentPaths: AssessmentPathsConfig
-    llmConfig: LlmConfig
-    llmServer: LlmServerConfig
-    llmRequest: LlmRequestConfig
+    assessment_paths: AssessmentPathsConfig
+    llm_config: LlmConfig
+    llm_server: LlmServerConfig
+    llm_request: LlmRequestConfig

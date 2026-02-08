@@ -31,12 +31,12 @@ def build_settings() -> AppConfig:
         hf_revision=None,
         hf_mmproj_filename=None,
         llama_gguf_path="",  # empty until bootstrap
-        llama_mmproj_path="",
+        llama_mmproj_path="", # bootstrap can update it if mmproj_path also downloaded
         llama_server_model="llama",
         llama_model_key="default",
         llama_model_display_name="Default Model",
         llama_model_alias="Default Model",
-        llama_model_family="llama",
+        llama_model_family="instruct",
     )
     llm_config.validate(allow_unresolved_model_paths=True)
 
