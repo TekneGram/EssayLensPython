@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from config.LlmRequestConfig import LlmRequestConfig
-from config.LlmServerConfig import LlmServerConfig
+from config.llm_request_config import LlmRequestConfig
+from config.llm_server_config import LlmServerConfig
 from config.assessment_paths_config import AssessmentPathsConfig
+from config.llm_config import LlmConfig
 
 
 @dataclass(frozen=True, slots=True)
 class AppConfig:
     assessment_paths: AssessmentPathsConfig
+    llm_config: LlmConfig
     llm_server: LlmServerConfig
     llm_request: LlmRequestConfig
 
@@ -23,16 +25,25 @@ def build_settings() -> AppConfig:
     assessment_paths.validate()
     assessment_paths.ensure_output_dirs()
 
-    llm_server = LlmServerConfig.from_strings(
-        llama_backend="server",
-        llama_server_path=".appdata/build/llama.cpp/bin/llama-server",
-        llama_gguf_path="", # empty until bootstrap
-        llama_server_url="http://127.0.0.1:8080/v1/chat/completions",
+    llm_config = LlmConfig.from_strings(
+        hf_repo_id=None,
+        hf_filename=None,
+        hf_revision=None,
+        hf_mmproj_filename=None,
+        llama_gguf_path="",  # empty until bootstrap
+        llama_mmproj_path="",
         llama_server_model="llama",
         llama_model_key="default",
         llama_model_display_name="Default Model",
         llama_model_alias="Default Model",
         llama_model_family="llama",
+    )
+    llm_config.validate(allow_unresolved_model_paths=True)
+
+    llm_server = LlmServerConfig.from_strings(
+        llama_backend="server",
+        llama_server_path=".appdata/build/llama.cpp/bin/llama-server",
+        llama_server_url="http://127.0.0.1:8080/v1/chat/completions",
         llama_n_ctx=4096,
         llama_host="127.0.0.1",
         llama_port=8080,
@@ -63,6 +74,7 @@ def build_settings() -> AppConfig:
 
     return AppConfig(
         assessment_paths=assessment_paths,
+        llm_config=llm_config,
         llm_server=llm_server,
         llm_request=llm_request,
     )

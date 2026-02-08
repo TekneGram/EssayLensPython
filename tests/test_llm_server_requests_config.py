@@ -5,29 +5,21 @@ import unittest
 from pathlib import Path
 
 from app.settings import build_settings
-from config.LlmRequestConfig import LlmRequestConfig
-from config.LlmServerConfig import LlmServerConfig
+from config.llm_request_config import LlmRequestConfig
+from config.llm_server_config import LlmServerConfig
 
 
 class LlmServerConfigTests(unittest.TestCase):
-    def test_from_strings_normalizes_paths(self) -> None:
+    def test_from_strings_normalizes_server_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             server_bin = tmp / "llama-server"
-            model_file = tmp / "model.gguf"
             server_bin.write_text("bin", encoding="utf-8")
-            model_file.write_text("gguf", encoding="utf-8")
 
             cfg = LlmServerConfig.from_strings(
                 llama_backend="server",
                 llama_server_path=server_bin,
-                llama_gguf_path=model_file,
                 llama_server_url="http://127.0.0.1:8080",
-                llama_server_model="m",
-                llama_model_key="k",
-                llama_model_display_name="d",
-                llama_model_alias="a",
-                llama_model_family="f",
                 llama_n_ctx=4096,
                 llama_host="127.0.0.1",
                 llama_port=8080,
@@ -43,26 +35,17 @@ class LlmServerConfigTests(unittest.TestCase):
             )
 
             self.assertEqual(cfg.llama_server_path, server_bin.resolve())
-            self.assertEqual(cfg.llama_gguf_path, model_file.resolve())
 
     def test_validate_rejects_invalid_port(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             server_bin = tmp / "llama-server"
-            model_file = tmp / "model.gguf"
             server_bin.write_text("bin", encoding="utf-8")
-            model_file.write_text("gguf", encoding="utf-8")
 
             cfg = LlmServerConfig.from_strings(
                 llama_backend="server",
                 llama_server_path=server_bin,
-                llama_gguf_path=model_file,
                 llama_server_url="http://127.0.0.1:8080",
-                llama_server_model="m",
-                llama_model_key="k",
-                llama_model_display_name="d",
-                llama_model_alias="a",
-                llama_model_family="f",
                 llama_n_ctx=4096,
                 llama_host="127.0.0.1",
                 llama_port=0,
@@ -84,20 +67,12 @@ class LlmServerConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             server_bin = tmp / "llama-server"
-            model_file = tmp / "model.gguf"
             server_bin.write_text("bin", encoding="utf-8")
-            model_file.write_text("gguf", encoding="utf-8")
 
             cfg = LlmServerConfig.from_strings(
                 llama_backend="server",
                 llama_server_path=server_bin,
-                llama_gguf_path=model_file,
                 llama_server_url="http://127.0.0.1:8080",
-                llama_server_model="m",
-                llama_model_key="k",
-                llama_model_display_name="d",
-                llama_model_alias="a",
-                llama_model_family="f",
                 llama_n_ctx=0,
                 llama_host="127.0.0.1",
                 llama_port=8080,
@@ -119,20 +94,12 @@ class LlmServerConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             server_bin = tmp / "llama-server"
-            model_file = tmp / "model.gguf"
             server_bin.write_text("bin", encoding="utf-8")
-            model_file.write_text("gguf", encoding="utf-8")
 
             cfg = LlmServerConfig.from_strings(
                 llama_backend="server",
                 llama_server_path=server_bin,
-                llama_gguf_path=model_file,
                 llama_server_url="http://127.0.0.1:8080",
-                llama_server_model="m",
-                llama_model_key="k",
-                llama_model_display_name="d",
-                llama_model_alias="a",
-                llama_model_family="f",
                 llama_n_ctx=4096,
                 llama_host="127.0.0.1",
                 llama_port=8080,
@@ -150,24 +117,16 @@ class LlmServerConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cfg.validate()
 
-    def test_validate_rejects_missing_identity_fields(self) -> None:
+    def test_validate_rejects_missing_server_identity_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             server_bin = tmp / "llama-server"
-            model_file = tmp / "model.gguf"
             server_bin.write_text("bin", encoding="utf-8")
-            model_file.write_text("gguf", encoding="utf-8")
 
             cfg = LlmServerConfig.from_strings(
                 llama_backend="server",
                 llama_server_path=server_bin,
-                llama_gguf_path=model_file,
                 llama_server_url="",
-                llama_server_model="",
-                llama_model_key="",
-                llama_model_display_name="",
-                llama_model_alias="",
-                llama_model_family="",
                 llama_n_ctx=4096,
                 llama_host="",
                 llama_port=8080,
@@ -184,39 +143,6 @@ class LlmServerConfigTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 cfg.validate()
-
-    def test_validate_allows_empty_gguf_path_for_bootstrap(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp = Path(tmpdir)
-            server_bin = tmp / "llama-server"
-            server_bin.write_text("bin", encoding="utf-8")
-
-            cfg = LlmServerConfig.from_strings(
-                llama_backend="server",
-                llama_server_path=server_bin,
-                llama_gguf_path="",
-                llama_server_url="http://127.0.0.1:8080",
-                llama_server_model="m",
-                llama_model_key="k",
-                llama_model_display_name="d",
-                llama_model_alias="a",
-                llama_model_family="f",
-                llama_n_ctx=4096,
-                llama_host="127.0.0.1",
-                llama_port=8080,
-                llama_n_threads=4,
-                llama_n_gpu_layers=99,
-                llama_n_batch=512,
-                llama_seed=0,
-                llama_rope_freq_base=10000.0,
-                llama_rope_freq_scale=1.0,
-                llama_use_jinja=True,
-                llama_cache_prompt=True,
-                llama_flash_attn=True,
-            )
-
-            self.assertIsNone(cfg.llama_gguf_path)
-            cfg.validate()
 
 
 class LlmRequestConfigTests(unittest.TestCase):
@@ -285,6 +211,7 @@ class BuildSettingsTests(unittest.TestCase):
     def test_build_settings_populates_all_configs(self) -> None:
         cfg = build_settings()
         self.assertIsNotNone(cfg.assessment_paths)
+        self.assertIsNotNone(cfg.llm_config)
         self.assertIsNotNone(cfg.llm_server)
         self.assertIsNotNone(cfg.llm_request)
 

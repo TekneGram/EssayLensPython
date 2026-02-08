@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from config.LlmRequestConfig import LlmRequestConfig
-from config.LlmServerConfig import LlmServerConfig
+from config.llm_request_config import LlmRequestConfig
+from config.llm_server_config import LlmServerConfig
 from config.assessment_paths_config import AssessmentPathsConfig
+from config.llm_config import LlmConfig
 
 @dataclass(frozen=True)
 class AppConfigShape:
     assessmentPaths: AssessmentPathsConfig
+    llmConfig: LlmConfig
     llmServer: LlmServerConfig
     llmRequest: LlmRequestConfig

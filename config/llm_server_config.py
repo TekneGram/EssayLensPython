@@ -8,13 +8,7 @@ from pathlib import Path
 class LlmServerConfig:
     llama_backend: str
     llama_server_path: Path
-    llama_gguf_path: Path | None
     llama_server_url: str
-    llama_server_model: str
-    llama_model_key: str
-    llama_model_display_name: str
-    llama_model_alias: str
-    llama_model_family: str
     llama_n_ctx: int
     llama_host: str
     llama_port: int
@@ -32,13 +26,7 @@ class LlmServerConfig:
     def from_strings(
         llama_backend: str,
         llama_server_path: str | Path,
-        llama_gguf_path: str | Path,
         llama_server_url: str,
-        llama_server_model: str,
-        llama_model_key: str,
-        llama_model_display_name: str,
-        llama_model_alias: str,
-        llama_model_family: str,
         llama_n_ctx: int,
         llama_host: str,
         llama_port: int,
@@ -55,13 +43,7 @@ class LlmServerConfig:
         return LlmServerConfig(
             llama_backend=llama_backend,
             llama_server_path=LlmServerConfig._norm(llama_server_path),
-            llama_gguf_path=LlmServerConfig._norm_optional(llama_gguf_path),
             llama_server_url=llama_server_url,
-            llama_server_model=llama_server_model,
-            llama_model_key=llama_model_key,
-            llama_model_display_name=llama_model_display_name,
-            llama_model_alias=llama_model_alias,
-            llama_model_family=llama_model_family,
             llama_n_ctx=llama_n_ctx,
             llama_host=llama_host,
             llama_port=llama_port,
@@ -80,11 +62,6 @@ class LlmServerConfig:
         required_strings: list[tuple[str, str]] = [
             ("llama_backend", self.llama_backend),
             ("llama_server_url", self.llama_server_url),
-            ("llama_server_model", self.llama_server_model),
-            ("llama_model_key", self.llama_model_key),
-            ("llama_model_display_name", self.llama_model_display_name),
-            ("llama_model_alias", self.llama_model_alias),
-            ("llama_model_family", self.llama_model_family),
             ("llama_host", self.llama_host),
         ]
         for field_name, value in required_strings:
@@ -98,13 +75,6 @@ class LlmServerConfig:
             raise ValueError(f"llama_server_path does not exist: {self.llama_server_path}")
         if not self.llama_server_path.is_file():
             raise ValueError(f"llama_server_path is not a file: {self.llama_server_path}")
-
-        # GGUF may be unset during bootstrap.
-        if self.llama_gguf_path is not None:
-            if not self.llama_gguf_path.exists():
-                raise ValueError(f"llama_gguf_path does not exist: {self.llama_gguf_path}")
-            if not self.llama_gguf_path.is_file():
-                raise ValueError(f"llama_gguf_path is not a file: {self.llama_gguf_path}")
 
         if self.llama_n_ctx <= 0:
             raise ValueError("llama_n_ctx must be > 0")
@@ -126,9 +96,3 @@ class LlmServerConfig:
     @staticmethod
     def _norm(p: str | Path) -> Path:
         return Path(p).expanduser().resolve()
-
-    @staticmethod
-    def _norm_optional(p: str | Path) -> Path | None:
-        if isinstance(p, str) and not p.strip():
-            return None
-        return LlmServerConfig._norm(p)
