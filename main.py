@@ -29,7 +29,7 @@ def main():
     type_print(f"Mode: {'Single Paragraph' if app_cfg.run_config.single_paragraph_mode else 'Essay'} (Set in run config)\n", color=Color.BLUE)
     type_print(f"Word document author name: {app_cfg.run_config.author} (Set in run config) \n", color=Color.BLUE)
 
-    build_container(app_cfg)
+    deps = build_container(app_cfg)
 
 if __name__ == "__main__":
     main()

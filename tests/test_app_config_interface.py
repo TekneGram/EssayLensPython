@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from app.settings import AppConfig
 from app.settings import build_settings
@@ -13,7 +14,8 @@ class AppConfigInterfaceTests(unittest.TestCase):
 
     def test_container_smoke_call(self) -> None:
         cfg = build_settings()
-        container = build_container(cfg)
+        with patch("app.container.LlmServerProcess.start", return_value=None):
+            container = build_container(cfg)
         self.assertIn("project_root", container)
         self.assertIn("server_bin", container)
 

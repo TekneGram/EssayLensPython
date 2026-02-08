@@ -54,6 +54,7 @@ def build_settings() -> AppConfig:
         llama_n_threads=None,
         llama_n_gpu_layers=99,
         llama_n_batch=None,
+        llama_n_parallel=8,
         llama_seed=None,
         llama_rope_freq_base=None,
         llama_rope_freq_scale=None,

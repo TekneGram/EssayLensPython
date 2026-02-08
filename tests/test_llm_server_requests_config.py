@@ -26,6 +26,7 @@ class LlmServerConfigTests(unittest.TestCase):
                 llama_n_threads=4,
                 llama_n_gpu_layers=99,
                 llama_n_batch=512,
+                llama_n_parallel=4,
                 llama_seed=0,
                 llama_rope_freq_base=10000.0,
                 llama_rope_freq_scale=1.0,
@@ -52,6 +53,7 @@ class LlmServerConfigTests(unittest.TestCase):
                 llama_n_threads=4,
                 llama_n_gpu_layers=99,
                 llama_n_batch=512,
+                llama_n_parallel=4,
                 llama_seed=0,
                 llama_rope_freq_base=10000.0,
                 llama_rope_freq_scale=1.0,
@@ -79,6 +81,7 @@ class LlmServerConfigTests(unittest.TestCase):
                 llama_n_threads=4,
                 llama_n_gpu_layers=99,
                 llama_n_batch=512,
+                llama_n_parallel=4,
                 llama_seed=0,
                 llama_rope_freq_base=10000.0,
                 llama_rope_freq_scale=1.0,
@@ -106,6 +109,7 @@ class LlmServerConfigTests(unittest.TestCase):
                 llama_n_threads=0,
                 llama_n_gpu_layers=-1,
                 llama_n_batch=0,
+                llama_n_parallel=0,
                 llama_seed=0,
                 llama_rope_freq_base=0.0,
                 llama_rope_freq_scale=0.0,
@@ -133,6 +137,7 @@ class LlmServerConfigTests(unittest.TestCase):
                 llama_n_threads=4,
                 llama_n_gpu_layers=99,
                 llama_n_batch=512,
+                llama_n_parallel=4,
                 llama_seed=0,
                 llama_rope_freq_base=10000.0,
                 llama_rope_freq_scale=1.0,
@@ -143,6 +148,60 @@ class LlmServerConfigTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 cfg.validate()
+
+    def test_validate_rejects_non_positive_parallel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            server_bin = tmp / "llama-server"
+            server_bin.write_text("bin", encoding="utf-8")
+
+            cfg = LlmServerConfig.from_strings(
+                llama_backend="server",
+                llama_server_path=server_bin,
+                llama_server_url="http://127.0.0.1:8080",
+                llama_n_ctx=4096,
+                llama_host="127.0.0.1",
+                llama_port=8080,
+                llama_n_threads=4,
+                llama_n_gpu_layers=99,
+                llama_n_batch=512,
+                llama_n_parallel=0,
+                llama_seed=0,
+                llama_rope_freq_base=10000.0,
+                llama_rope_freq_scale=1.0,
+                llama_use_jinja=True,
+                llama_cache_prompt=True,
+                llama_flash_attn=True,
+            )
+
+            with self.assertRaises(ValueError):
+                cfg.validate()
+
+    def test_validate_accepts_positive_parallel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            server_bin = tmp / "llama-server"
+            server_bin.write_text("bin", encoding="utf-8")
+
+            cfg = LlmServerConfig.from_strings(
+                llama_backend="server",
+                llama_server_path=server_bin,
+                llama_server_url="http://127.0.0.1:8080",
+                llama_n_ctx=4096,
+                llama_host="127.0.0.1",
+                llama_port=8080,
+                llama_n_threads=4,
+                llama_n_gpu_layers=99,
+                llama_n_batch=512,
+                llama_n_parallel=8,
+                llama_seed=0,
+                llama_rope_freq_base=10000.0,
+                llama_rope_freq_scale=1.0,
+                llama_use_jinja=True,
+                llama_cache_prompt=True,
+                llama_flash_attn=True,
+            )
+            cfg.validate()
 
 
 class LlmRequestConfigTests(unittest.TestCase):

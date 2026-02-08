@@ -15,6 +15,7 @@ class LlmServerConfig:
     llama_n_threads: int | None
     llama_n_gpu_layers: int | None
     llama_n_batch: int | None
+    llama_n_parallel: int | None
     llama_seed: int | None
     llama_rope_freq_base: float | None
     llama_rope_freq_scale: float | None
@@ -33,6 +34,7 @@ class LlmServerConfig:
         llama_n_threads: int | None,
         llama_n_gpu_layers: int | None,
         llama_n_batch: int | None,
+        llama_n_parallel: int | None,
         llama_seed: int | None,
         llama_rope_freq_base: float | None,
         llama_rope_freq_scale: float | None,
@@ -50,6 +52,7 @@ class LlmServerConfig:
             llama_n_threads=llama_n_threads,
             llama_n_gpu_layers=llama_n_gpu_layers,
             llama_n_batch=llama_n_batch,
+            llama_n_parallel=llama_n_parallel,
             llama_seed=llama_seed,
             llama_rope_freq_base=llama_rope_freq_base,
             llama_rope_freq_scale=llama_rope_freq_scale,
@@ -88,6 +91,8 @@ class LlmServerConfig:
             raise ValueError("llama_n_gpu_layers must be >= 0 when provided")
         if self.llama_n_batch is not None and self.llama_n_batch <= 0:
             raise ValueError("llama_n_batch must be > 0 when provided")
+        if self.llama_n_parallel is not None and self.llama_n_parallel <= 0:
+            raise ValueError("llama_n_parallel must be > 0 when provided")
         if self.llama_rope_freq_base is not None and self.llama_rope_freq_base <= 0:
             raise ValueError("llama_rope_freq_base must be > 0 when provided")
         if self.llama_rope_freq_scale is not None and self.llama_rope_freq_scale <= 0:
