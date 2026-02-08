@@ -6,6 +6,8 @@ from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
 from config.assessment_paths_config import AssessmentPathsConfig
 from config.llm_config import LlmConfig
+from config.ged_config import GedConfig
+from config.run_config import RunConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +16,8 @@ class AppConfig:
     llm_config: LlmConfig
     llm_server: LlmServerConfig
     llm_request: LlmRequestConfig
+    ged_config: GedConfig
+    run_config: RunConfig
 
 def build_settings() -> AppConfig:
 
@@ -72,9 +76,25 @@ def build_settings() -> AppConfig:
     )
     llm_request.validate()
 
+    ged_config = GedConfig.from_strings(
+        model_name="gotutiyan/token-ged-bert-large-cased-bin",
+        batch_size=8,
+    )
+    ged_config.validate()
+
+    run_config = RunConfig.from_strings(
+        author="Daniel Parsons",
+        single_paragraph_mode = True,
+        max_llm_corrections=5,
+        include_edited_text_section_policy=True
+    )
+    run_config.validate()
+
     return AppConfig(
         assessment_paths=assessment_paths,
         llm_config=llm_config,
         llm_server=llm_server,
         llm_request=llm_request,
+        ged_config=ged_config,
+        run_config=run_config
     )

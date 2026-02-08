@@ -19,10 +19,12 @@ from app.select_model import (
 )
 from app.settings import AppConfig
 from config.assessment_paths_config import AssessmentPathsConfig
+from config.ged_config import GedConfig
 from config.llm_config import LlmConfig
 from config.llm_model_spec import LlmModelSpec
 from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
+from config.run_config import RunConfig
 
 
 class SelectModelHelpersTests(unittest.TestCase):
@@ -173,6 +175,10 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         default_response_format=None,
                         default_stream=False,
                     ),
+                    ged_config=GedConfig.from_strings(
+                        model_name="gotutiyan/token-ged-bert-large-cased-bin"
+                    ),
+                    run_config=RunConfig.from_strings(author="tester"),
                 )
 
                 with patch(
@@ -251,6 +257,10 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         default_response_format=None,
                         default_stream=False,
                     ),
+                    ged_config=GedConfig.from_strings(
+                        model_name="gotutiyan/token-ged-bert-large-cased-bin"
+                    ),
+                    run_config=RunConfig.from_strings(author="tester"),
                 )
 
                 with patch(
@@ -326,6 +336,10 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         default_response_format=None,
                         default_stream=False,
                     ),
+                    ged_config=GedConfig.from_strings(
+                        model_name="gotutiyan/token-ged-bert-large-cased-bin"
+                    ),
+                    run_config=RunConfig.from_strings(author="tester"),
                 )
 
                 captured_specs: dict[str, list[str]] = {}
@@ -407,6 +421,10 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         default_response_format=None,
                         default_stream=False,
                     ),
+                    ged_config=GedConfig.from_strings(
+                        model_name="gotutiyan/token-ged-bert-large-cased-bin"
+                    ),
+                    run_config=RunConfig.from_strings(author="tester"),
                 )
 
                 captured_specs: dict[str, list[str]] = {}
@@ -489,6 +507,10 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         default_response_format=None,
                         default_stream=False,
                     ),
+                    ged_config=GedConfig.from_strings(
+                        model_name="gotutiyan/token-ged-bert-large-cased-bin"
+                    ),
+                    run_config=RunConfig.from_strings(author="tester"),
                 )
 
                 captured_specs: dict[str, list[str]] = {}

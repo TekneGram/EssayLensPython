@@ -214,6 +214,11 @@ class BuildSettingsTests(unittest.TestCase):
         self.assertIsNotNone(cfg.llm_config)
         self.assertIsNotNone(cfg.llm_server)
         self.assertIsNotNone(cfg.llm_request)
+        self.assertIsNotNone(cfg.ged_config)
+        self.assertTrue(cfg.ged_config.model_name.strip())
+        self.assertGreater(cfg.ged_config.batch_size, 0)
+        self.assertIsNotNone(cfg.run_config)
+        self.assertTrue(cfg.run_config.author.strip())
 
 
 if __name__ == "__main__":

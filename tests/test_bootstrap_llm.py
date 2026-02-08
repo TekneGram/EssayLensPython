@@ -15,9 +15,11 @@ from app.bootstrap_llm import (
 )
 from app.settings import AppConfig
 from config.assessment_paths_config import AssessmentPathsConfig
+from config.ged_config import GedConfig
 from config.llm_config import LlmConfig
 from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
+from config.run_config import RunConfig
 
 
 def _build_app_cfg(root: Path) -> AppConfig:
@@ -69,6 +71,8 @@ def _build_app_cfg(root: Path) -> AppConfig:
             default_response_format=None,
             default_stream=False,
         ),
+        ged_config=GedConfig.from_strings(model_name="gotutiyan/token-ged-bert-large-cased-bin"),
+        run_config=RunConfig.from_strings(author="tester"),
     )
 
 
@@ -103,6 +107,8 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ged_config=cfg.ged_config,
+                run_config=cfg.run_config,
             )
 
             with patch("app.bootstrap_llm.hf_hub_download") as mocked:
@@ -142,6 +148,8 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ged_config=cfg.ged_config,
+                run_config=cfg.run_config,
             )
             with self.assertRaises(RuntimeError):
                 ensure_gguf(cfg, root / ".appdata" / "models")
@@ -170,6 +178,8 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ged_config=cfg.ged_config,
+                run_config=cfg.run_config,
             )
 
             def _fake_download(**kwargs):
@@ -209,6 +219,8 @@ class BootstrapLlmTests(unittest.TestCase):
                     llama_flash_attn=cfg.llm_server.llama_flash_attn,
                 ),
                 llm_request=cfg.llm_request,
+                ged_config=cfg.ged_config,
+                run_config=cfg.run_config,
             )
             with self.assertRaises(RuntimeError):
                 ensure_llm_server_bin(cfg)
@@ -234,6 +246,8 @@ class BootstrapLlmTests(unittest.TestCase):
                     ),
                     llm_server=cfg.llm_server,
                     llm_request=cfg.llm_request,
+                    ged_config=cfg.ged_config,
+                    run_config=cfg.run_config,
                 )
 
                 def _fake_download(**kwargs):
