@@ -1,0 +1,98 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+pytest_cache/
+cover/
+htmlcov/
+
+# Type checker / language server
+.mypy_cache/
+.pyright/
+.pytype/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+.env/
+.env.*
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+profile_default/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Logs and outputs
+*.log
+logs/
+outputs/
+results/
+
+# Data artifacts (typical NLP/LLM)
+checkpoints/
+models/
+model_cache/
+wandb/
+mlruns/
+lightning_logs/
+.appdata/bin
+third_party/llama.cpp/build/
+third_party/llama.cpp/.cache/
+third_party/llama.cpp
+
+# Hugging Face / Transformers caches
+.huggingface/
+transformers_cache/
+
+# Common model/data weight formats
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+*.gguf
+
+# Large datasets / serialized artifacts
+*.arrow
+*.parquet
+*.npz
+*.npy
+
+# Secret files
+*.key
+*.pem
+*.p12
+
+# Corpus files
+Assessment
+
+# Keep this file
+!.gitignore
