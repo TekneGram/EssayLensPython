@@ -9,6 +9,30 @@ try:
 except ImportError:
     hf_hub_download = None
 
+
+def ensure_en_core_web_sm() -> None:
+    model_name = "en_core_web_sm"
+    try:
+        import spacy  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError(
+            "spacy is not installed. Install dependencies before bootstrapping spaCy models."
+        ) from exc
+
+    if spacy.util.is_package(model_name):
+        return
+
+    try:
+        spacy.cli.download(model_name)
+    except Exception as exc:
+        raise RuntimeError(f"Failed to download spaCy model '{model_name}': {exc}") from exc
+
+    if not spacy.util.is_package(model_name):
+        raise RuntimeError(
+            f"spaCy model '{model_name}' is still unavailable after download."
+        )
+
+
 def get_app_base_dir() -> Path:
     # Get base directory to store model
     # Base directory is .appdata while in dev mode
@@ -99,6 +123,7 @@ def ensure_llm_server_bin(app_cfg: AppConfig) -> Path:
 
 
 def bootstrap_llm(app_cfg: AppConfig) -> AppConfig:
+    ensure_en_core_web_sm()
 
     # Resolve the app's base directory where the data/models are stored (.appdata)
     base_dir = get_app_base_dir()

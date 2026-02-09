@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
 from app.bootstrap_llm import (
     bootstrap_llm,
+    ensure_en_core_web_sm,
     ensure_gguf,
     ensure_llm_server_bin,
     ensure_mmproj,
@@ -78,6 +81,59 @@ def _build_app_cfg(root: Path) -> AppConfig:
 
 
 class BootstrapLlmTests(unittest.TestCase):
+    def test_ensure_en_core_web_sm_no_download_when_present(self) -> None:
+        fake_spacy = SimpleNamespace(
+            util=SimpleNamespace(is_package=lambda name: True),
+            cli=SimpleNamespace(download=lambda name: None),
+        )
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            ensure_en_core_web_sm()
+
+    def test_ensure_en_core_web_sm_downloads_when_missing(self) -> None:
+        calls: list[str] = []
+        state = {"present": False}
+
+        def _is_package(_: str) -> bool:
+            return state["present"]
+
+        def _download(name: str) -> None:
+            calls.append(name)
+            state["present"] = True
+
+        fake_spacy = SimpleNamespace(
+            util=SimpleNamespace(is_package=_is_package),
+            cli=SimpleNamespace(download=_download),
+        )
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            ensure_en_core_web_sm()
+        self.assertEqual(calls, ["en_core_web_sm"])
+
+    def test_ensure_en_core_web_sm_raises_when_spacy_missing(self) -> None:
+        with patch.dict(sys.modules, {"spacy": None}):
+            with self.assertRaises(RuntimeError):
+                ensure_en_core_web_sm()
+
+    def test_ensure_en_core_web_sm_raises_on_download_failure(self) -> None:
+        def _download(_: str) -> None:
+            raise Exception("network error")
+
+        fake_spacy = SimpleNamespace(
+            util=SimpleNamespace(is_package=lambda name: False),
+            cli=SimpleNamespace(download=_download),
+        )
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with self.assertRaises(RuntimeError):
+                ensure_en_core_web_sm()
+
+    def test_ensure_en_core_web_sm_raises_when_still_missing_after_download(self) -> None:
+        fake_spacy = SimpleNamespace(
+            util=SimpleNamespace(is_package=lambda name: False),
+            cli=SimpleNamespace(download=lambda name: None),
+        )
+        with patch.dict(sys.modules, {"spacy": fake_spacy}):
+            with self.assertRaises(RuntimeError):
+                ensure_en_core_web_sm()
+
     def test_get_app_base_dir_uses_appdata(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             prev = Path.cwd()
@@ -258,8 +314,9 @@ class BootstrapLlmTests(unittest.TestCase):
                     target.write_text("x", encoding="utf-8")
                     return str(target)
 
-                with patch("app.bootstrap_llm.hf_hub_download", side_effect=_fake_download):
-                    updated = bootstrap_llm(cfg)
+                with patch("app.bootstrap_llm.ensure_en_core_web_sm"):
+                    with patch("app.bootstrap_llm.hf_hub_download", side_effect=_fake_download):
+                        updated = bootstrap_llm(cfg)
 
                 self.assertIsNotNone(updated.llm_config.llama_gguf_path)
                 self.assertTrue(updated.llm_config.llama_gguf_path.exists())
@@ -275,9 +332,31 @@ class BootstrapLlmTests(unittest.TestCase):
             os.chdir(root)
             try:
                 cfg = _build_app_cfg(root)
-                with patch("app.bootstrap_llm.hf_hub_download", side_effect=Exception("network error")):
-                    with self.assertRaises(RuntimeError):
+                with patch("app.bootstrap_llm.ensure_en_core_web_sm"):
+                    with patch("app.bootstrap_llm.hf_hub_download", side_effect=Exception("network error")):
+                        with self.assertRaises(RuntimeError):
+                            bootstrap_llm(cfg)
+            finally:
+                os.chdir(prev)
+
+    def test_bootstrap_llm_calls_ensure_spacy_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            prev = Path.cwd()
+            os.chdir(root)
+            try:
+                cfg = _build_app_cfg(root)
+
+                def _fake_download(**kwargs):
+                    target = Path(kwargs["local_dir"]) / kwargs["filename"]
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text("x", encoding="utf-8")
+                    return str(target)
+
+                with patch("app.bootstrap_llm.ensure_en_core_web_sm") as ensure_spacy_mock:
+                    with patch("app.bootstrap_llm.hf_hub_download", side_effect=_fake_download):
                         bootstrap_llm(cfg)
+                ensure_spacy_mock.assert_called_once()
             finally:
                 os.chdir(prev)
 

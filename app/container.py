@@ -1,10 +1,11 @@
-# Import services
-
-
-# Import llm server process
+# Import services and processes
 from nlp.llm.llm_server_process import LlmServerProcess
 from nlp.llm.llm_client import OpenAICompatChatClient
 from services.llm_service import LlmService
+from services.explainability import ExplainabilityRecorder
+from inout.explainability_writer import ExplainabilityWriter
+from services.ged_service import GedService
+from nlp.ged.ged_bert import GedBertDetector
 
 
 # Standard utilities
@@ -33,7 +34,11 @@ def build_container(app_cfg: AppConfig):
 
     # Determine the project root (used for resolving relative paths)
     project_root = Path(__file__).resolve().parents[1]
-    print(project_root)
+
+    # ----- GED BERT -----
+    # Load the GED BERT model and wrap the grammar detector in a service abstraction
+    ged_detector = GedBertDetector(model_name=app_cfg.ged_config.model_name)
+    ged_service = GedService(detector=ged_detector)
     
 
     # ----- LLM Wiring (server mode) -----
@@ -72,7 +77,7 @@ def build_container(app_cfg: AppConfig):
         # Start the llm server
         server_proc.start()
 
-        # Ensure the server is stopped clearnly on program exit
+        # Ensure the server is stopped cleanly on program exit
         atexit.register(server_proc.stop)
 
         # ----- LLM Client -----
@@ -87,18 +92,24 @@ def build_container(app_cfg: AppConfig):
             max_parallel=app_cfg.llm_server.llama_n_parallel,
         )
 
+    # ----- Explainability Recorder -----
+    explainability = ExplainabilityRecorder.new(
+        run_cfg=app_cfg.run_config,
+        ged_cfg=app_cfg.ged_config,
+        llm_cfg=app_cfg.llm_config
+    )
 
+    explain_file_writer = ExplainabilityWriter(
+        app_cfg.assessment_paths.explained_folder
+    )
 
-    def _cleanup() -> None:
-        # Placeholder for future server process cleanup.
-        if server_proc is not None:
-            return
-
-    atexit.register(_cleanup)
     return {
         "project_root": project_root,
+        "ged": ged_service,
         "server_bin": server_bin,
         "server_proc": server_proc,
         "llm_client": client,
         "llm_service": llm_service,
+        "explain": explainability,
+        "explain_file_writer": explain_file_writer
     }

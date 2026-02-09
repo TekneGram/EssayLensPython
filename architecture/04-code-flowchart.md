@@ -1,50 +1,48 @@
 graph TD
-    %% Styling
     classDef config fill:#f9f,stroke:#333,stroke-width:2px;
     classDef core fill:#bbf,stroke:#333,stroke-width:2px;
     classDef nlp fill:#dfd,stroke:#333,stroke-width:1px;
     classDef io fill:#ffd,stroke:#333,stroke-width:1px;
 
-    %% Level 1: Initialization
     subgraph Initialization
-        main[main.py] -- "AppConfig" --> settings[app.settings]
-        settings -- "Config objects" --> cfg_mods[config.*]
-        main -- "Update config from choice" --> select[app.select_model]
-        select -- "Model metadata" --> model_spec[config.llm_model_spec]
-        main -- "Resolve artifacts" --> bootstrap[app.bootstrap_llm]
+        main[main.py] --> settings[app.settings.build_settings]
+        settings --> cfg_mods[config.*]
+        main --> select[app.select_model.select_model_and_update_config]
+        select --> model_spec[config.llm_model_spec]
+        main --> bootstrap[app.bootstrap_llm.bootstrap_llm]
     end
 
-    %% Level 2: Dependency Wiring
-    bootstrap -- "Resolved model + server paths" --> container[app.container]
-    container -- "Injected instances" --> pipeline[app.pipeline]
+    bootstrap --> container[app.container.build_container]
+    container --> server_proc[nlp.llm.llm_server_process.LlmServerProcess]
+    container --> llm_client[nlp.llm.llm_client.OpenAICompatChatClient]
+    container --> llm_svc[services.llm_service.LlmService]
 
-    %% Level 3: Pipeline & Task Execution
-    subgraph Pipeline_Execution [Pipeline and Tasks]
-        pipeline -- "run_test(app_cfg)" --> llm_svc[services.llm_service]
-        llm_svc -- "run_parallel_kv_cache_test" --> task_runner[nlp.llm.tasks.test_parallel]
-        task_runner -- "ChatRequest[]" --> llm_svc
+    subgraph Pipeline_Execution [Current Main Path]
+        main --> pipeline[app.pipeline.TestPipeline]
+        pipeline --> run_again[run_test_again]
+        run_again --> mode[llm.with_mode no_think]
+        run_again --> task_builder[nlp.llm.tasks.test_parallel_2.build_feedback_tasks]
+        task_builder --> dto_req[nlp.llm.llm_types.ChatRequest]
+        dto_req --> llm_svc
+        llm_svc --> svc_many[LlmService.chat_many]
     end
 
-    %% Level 4: LLM Client and Server Process
     subgraph LLM_Runtime [LLM Runtime]
-        llm_svc -- "chat_many / chat_async" --> llm_client[nlp.llm.llm_client]
-        container -- "start/stop lifecycle" --> server_proc[nlp.llm.llm_server_process]
-        llm_client -- "HTTP JSON" --> llama_server[(llama-server endpoint)]
-        server_proc -- "subprocess + health checks" --> llama_server
+        svc_many --> client_many[OpenAICompatChatClient.chat_many]
+        client_many --> client_async[OpenAICompatChatClient.chat_async]
+        client_async --> llama_server[(llama-server endpoint)]
+        server_proc --> llama_server
     end
 
-    %% Level 5: Persistence and Output
-    subgraph Persistence_Output [Persistence and Output]
-        select -- "Persist selected model key" --> sel_store[(.appdata/config/llm_model.json)]
-        bootstrap -- "Download GGUF/mmproj" --> model_store[(.appdata/models)]
-        pipeline -- "print ChatResponse/results" --> terminal[utils.terminal_ui]
+    subgraph Output [Output]
+        main --> print_loop[type_print task outputs]
+        select --> sel_store[(.appdata/config/llm_model.json)]
+        bootstrap --> model_store[(.appdata/models)]
     end
 
-    %% Interfaces
-    pipeline -. "Typed by" .-> app_shape[interfaces.config.app_config]
+    pipeline -. typed by .-> app_shape[interfaces.config.app_config]
 
-    %% Assign Classes
     class settings,select,bootstrap,cfg_mods,model_spec,app_shape config;
-    class main,container,pipeline,llm_svc core;
-    class llm_client,server_proc,task_runner,llama_server nlp;
-    class sel_store,model_store,terminal io;
+    class main,container,pipeline,run_again,mode,llm_svc,svc_many core;
+    class llm_client,server_proc,task_builder,dto_req,client_many,client_async,llama_server nlp;
+    class sel_store,model_store,print_loop io;
