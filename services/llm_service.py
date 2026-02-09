@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 from nlp.llm.llm_client import ChatRequest, OpenAICompatChatClient
+from nlp.llm.tasks.test_parallel import run_parallel_test
 
 
 @dataclass
@@ -48,3 +49,6 @@ class LlmService:
             requests_,
             max_concurrency=max_concurrency or self.max_parallel,
         )
+
+    async def run_parallel_kv_cache_test(self, app_cfg: Any) -> dict[str, Any]:
+        return await run_parallel_test(self, app_cfg)

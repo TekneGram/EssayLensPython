@@ -166,15 +166,15 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         llama_flash_attn=True,
                     ),
                     llm_request=LlmRequestConfig.from_values(
-                        default_max_tokens=1024,
-                        default_temperature=0.2,
-                        default_top_p=0.95,
-                        default_top_k=40,
-                        default_repeat_penalty=1.1,
-                        default_seed=None,
-                        default_stop=None,
-                        default_response_format=None,
-                        default_stream=False,
+                        max_tokens=1024,
+                        temperature=0.2,
+                        top_p=0.95,
+                        top_k=40,
+                        repeat_penalty=1.1,
+                        seed=None,
+                        stop=None,
+                        response_format=None,
+                        stream=False,
                     ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
@@ -249,15 +249,15 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         llama_flash_attn=True,
                     ),
                     llm_request=LlmRequestConfig.from_values(
-                        default_max_tokens=1024,
-                        default_temperature=0.2,
-                        default_top_p=0.95,
-                        default_top_k=40,
-                        default_repeat_penalty=1.1,
-                        default_seed=None,
-                        default_stop=None,
-                        default_response_format=None,
-                        default_stream=False,
+                        max_tokens=1024,
+                        temperature=0.2,
+                        top_p=0.95,
+                        top_k=40,
+                        repeat_penalty=1.1,
+                        seed=None,
+                        stop=None,
+                        response_format=None,
+                        stream=False,
                     ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
@@ -329,15 +329,15 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         llama_flash_attn=True,
                     ),
                     llm_request=LlmRequestConfig.from_values(
-                        default_max_tokens=1024,
-                        default_temperature=0.2,
-                        default_top_p=0.95,
-                        default_top_k=40,
-                        default_repeat_penalty=1.1,
-                        default_seed=None,
-                        default_stop=None,
-                        default_response_format=None,
-                        default_stream=False,
+                        max_tokens=1024,
+                        temperature=0.2,
+                        top_p=0.95,
+                        top_k=40,
+                        repeat_penalty=1.1,
+                        seed=None,
+                        stop=None,
+                        response_format=None,
+                        stream=False,
                     ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
@@ -365,7 +365,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                 ):
                     select_model_and_update_config(app_cfg)
 
-                self.assertEqual(captured_specs["keys"], ["qwen3_8b_q8"])
+                self.assertEqual(captured_specs["keys"], ["qwen3_4b_q8", "qwen3_8b_q8"])
             finally:
                 os.chdir(prev_cwd)
 
@@ -415,15 +415,15 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         llama_flash_attn=True,
                     ),
                     llm_request=LlmRequestConfig.from_values(
-                        default_max_tokens=1024,
-                        default_temperature=0.2,
-                        default_top_p=0.95,
-                        default_top_k=40,
-                        default_repeat_penalty=1.1,
-                        default_seed=None,
-                        default_stop=None,
-                        default_response_format=None,
-                        default_stream=False,
+                        max_tokens=1024,
+                        temperature=0.2,
+                        top_p=0.95,
+                        top_k=40,
+                        repeat_penalty=1.1,
+                        seed=None,
+                        stop=None,
+                        response_format=None,
+                        stream=False,
                     ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
@@ -468,6 +468,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                 server_bin.write_text("bin", encoding="utf-8")
                 # Mark all models as downloaded.
                 (models_dir / "Qwen3-4B-Instruct-2507-Q8_0.gguf").write_text("x", encoding="utf-8")
+                (models_dir / "Qwen3-4B-Q8_0.gguf").write_text("x", encoding="utf-8")
                 (models_dir / "Qwen3-8B-Q8_0.gguf").write_text("x", encoding="utf-8")
 
                 app_cfg = AppConfig(
@@ -502,15 +503,15 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         llama_flash_attn=True,
                     ),
                     llm_request=LlmRequestConfig.from_values(
-                        default_max_tokens=1024,
-                        default_temperature=0.2,
-                        default_top_p=0.95,
-                        default_top_k=40,
-                        default_repeat_penalty=1.1,
-                        default_seed=None,
-                        default_stop=None,
-                        default_response_format=None,
-                        default_stream=False,
+                        max_tokens=1024,
+                        temperature=0.2,
+                        top_p=0.95,
+                        top_k=40,
+                        repeat_penalty=1.1,
+                        seed=None,
+                        stop=None,
+                        response_format=None,
+                        stream=False,
                     ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
@@ -540,7 +541,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
 
                 self.assertEqual(
                     set(captured_specs["keys"]),
-                    {"qwen3_4b_instruct_q8", "qwen3_8b_q8"},
+                    {"qwen3_4b_instruct_q8", "qwen3_4b_q8", "qwen3_8b_q8"},
                 )
             finally:
                 os.chdir(prev_cwd)

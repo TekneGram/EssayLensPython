@@ -54,7 +54,7 @@ def build_settings() -> AppConfig:
         llama_n_threads=None,
         llama_n_gpu_layers=99,
         llama_n_batch=None,
-        llama_n_parallel=8,
+        llama_n_parallel=3,
         llama_seed=None,
         llama_rope_freq_base=None,
         llama_rope_freq_scale=None,
@@ -65,15 +65,15 @@ def build_settings() -> AppConfig:
     llm_server.validate()
 
     llm_request = LlmRequestConfig.from_values(
-        default_max_tokens=1024,
-        default_temperature=0.2,
-        default_top_p=0.95,
-        default_top_k=40,
-        default_repeat_penalty=1.1,
-        default_seed=None,
-        default_stop=None,
-        default_response_format=None,
-        default_stream=False,
+        max_tokens=1024,
+        temperature=0.2,
+        top_p=0.95,
+        top_k=40,
+        repeat_penalty=1.1,
+        seed=None,
+        stop=None,
+        response_format=None,
+        stream=False,
     )
     llm_request.validate()
 

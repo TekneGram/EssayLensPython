@@ -207,60 +207,60 @@ class LlmServerConfigTests(unittest.TestCase):
 class LlmRequestConfigTests(unittest.TestCase):
     def test_validate_rejects_non_positive_max_tokens(self) -> None:
         cfg = LlmRequestConfig.from_values(
-            default_max_tokens=0,
-            default_temperature=0.2,
-            default_top_p=0.9,
-            default_top_k=40,
-            default_repeat_penalty=1.1,
-            default_seed=None,
-            default_stop=None,
-            default_response_format=None,
-            default_stream=False,
+            max_tokens=0,
+            temperature=0.2,
+            top_p=0.9,
+            top_k=40,
+            repeat_penalty=1.1,
+            seed=None,
+            stop=None,
+            response_format=None,
+            stream=False,
         )
         with self.assertRaises(ValueError):
             cfg.validate()
 
     def test_validate_rejects_invalid_top_p(self) -> None:
         cfg = LlmRequestConfig.from_values(
-            default_max_tokens=256,
-            default_temperature=0.2,
-            default_top_p=2.0,
-            default_top_k=40,
-            default_repeat_penalty=1.1,
-            default_seed=None,
-            default_stop=None,
-            default_response_format=None,
-            default_stream=False,
+            max_tokens=256,
+            temperature=0.2,
+            top_p=2.0,
+            top_k=40,
+            repeat_penalty=1.1,
+            seed=None,
+            stop=None,
+            response_format=None,
+            stream=False,
         )
         with self.assertRaises(ValueError):
             cfg.validate()
 
     def test_validate_rejects_invalid_top_k(self) -> None:
         cfg = LlmRequestConfig.from_values(
-            default_max_tokens=256,
-            default_temperature=0.2,
-            default_top_p=0.9,
-            default_top_k=0,
-            default_repeat_penalty=1.1,
-            default_seed=None,
-            default_stop=None,
-            default_response_format=None,
-            default_stream=False,
+            max_tokens=256,
+            temperature=0.2,
+            top_p=0.9,
+            top_k=0,
+            repeat_penalty=1.1,
+            seed=None,
+            stop=None,
+            response_format=None,
+            stream=False,
         )
         with self.assertRaises(ValueError):
             cfg.validate()
 
     def test_validate_rejects_invalid_stop_tokens(self) -> None:
         cfg = LlmRequestConfig.from_values(
-            default_max_tokens=256,
-            default_temperature=0.2,
-            default_top_p=0.9,
-            default_top_k=40,
-            default_repeat_penalty=1.1,
-            default_seed=None,
-            default_stop=["", "  "],
-            default_response_format=None,
-            default_stream=False,
+            max_tokens=256,
+            temperature=0.2,
+            top_p=0.9,
+            top_k=40,
+            repeat_penalty=1.1,
+            seed=None,
+            stop=["", "  "],
+            response_format=None,
+            stream=False,
         )
         with self.assertRaises(ValueError):
             cfg.validate()

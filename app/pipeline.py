@@ -3,6 +3,7 @@ from __future__ import annotations
 # Standard library imports
 from dataclasses import dataclass
 from pathlib import Path
+import asyncio
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -23,5 +24,4 @@ class TestPipeline():
     llm: "LlmService"
 
     def run_test(self, app_cfg:AppConfigShape):
-        # run a test chat
-        return
+        return asyncio.run(self.llm.run_parallel_kv_cache_test(app_cfg))

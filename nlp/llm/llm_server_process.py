@@ -98,50 +98,68 @@ class LlmServerProcess:
 
         # Wait until Openai-compatible chat endpoint responds (model loaded)
         deadline = time.time() + wait_s
-        url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/health"
-        models_url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/v1/models"
-        chat_url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/v1/chat/completions"
-        chat_payload = {
-            "model": self.llm_cfg.llama_model_alias,
-            "temperature": 0.0,
-            "max_tokens": 1,
-            "messages": [
-                {"role": "system", "content": "You are a readiness probe."},
-                {"role": "user", "content": "ping"}
-            ],
-        }
+        health_url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/health"
+        # models_url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/v1/models"
+        # chat_url = f"http://{self.server_cfg.llama_host}:{self.server_cfg.llama_port}/v1/chat/completions"
+        # chat_payload = {
+        #     "model": self.llm_cfg.llama_model_alias,
+        #     "temperature": 0.0,
+        #     "max_tokens": 1,
+        #     "messages": [
+        #         {"role": "system", "content": "You are a readiness probe."},
+        #         {"role": "user", "content": "ping"}
+        #     ],
+        # }
         while time.time() < deadline:
             if self._proc.poll() is not None:
-                out, err = self._proc.communicate(timeout=1)
-                raise RuntimeError(
-                    "llm-server exited during startup.\n"
-                    f"stdout:\n{out}\n\nstderr:\n{err}"
-                )
-
-            # Try chat first; it only succeeds after model loads
+                error_log = self._proc.stdout.read() if self._proc.stdout else "No logs"
+                raise RuntimeError(f"llm-server exited: {error_log}")
+            
             try:
-                r = requests.post(chat_url, json=chat_payload, timeout=1)
+                r = requests.get(health_url, timeout=1)
                 if r.status_code == 200:
-                    return
+                    data=r.json()
+                    if data.get("status") == "ok":
+                        return
+                    elif data.get("status") == "loading-model":
+                        pass
             except Exception:
+                # Connection not refused but server not responding yet
                 pass
 
-            # Fallback: health/models can be up before the model is ready
-            try:
-                r = requests.get(url, timeout=1)
-                if r.status_code == 200:
-                    pass
-            except Exception:
-                pass
+            time.sleep(1.0) # Give the model VRAM time to breathe.
+            
+            # if self._proc.poll() is not None:
+            #     out, err = self._proc.communicate(timeout=1)
+            #     raise RuntimeError(
+            #         "llm-server exited during startup.\n"
+            #         f"stdout:\n{out}\n\nstderr:\n{err}"
+            #     )
 
-            try:
-                r = requests.get(models_url, timeout=1)
-                if r.status_code == 200:
-                    pass
-            except Exception:
-                pass
+            # # Try chat first; it only succeeds after model loads
+            # try:
+            #     r = requests.post(chat_url, json=chat_payload, timeout=1)
+            #     if r.status_code == 200:
+            #         return
+            # except Exception:
+            #     pass
 
-            time.sleep(0.25)
+            # # Fallback: health/models can be up before the model is ready
+            # try:
+            #     r = requests.get(url, timeout=1)
+            #     if r.status_code == 200:
+            #         pass
+            # except Exception:
+            #     pass
+
+            # try:
+            #     r = requests.get(models_url, timeout=1)
+            #     if r.status_code == 200:
+            #         pass
+            # except Exception:
+            #     pass
+
+            # time.sleep(0.25)
         raise TimeoutError("Timed out waiting for the llm server to become ready.")
     
         
