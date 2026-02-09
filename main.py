@@ -5,6 +5,7 @@ from app.select_model import select_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
 from app.pipeline import TestPipeline
+from nlp.llm.llm_client import ChatResponse
 
 def main():
     # Handle environment variables for production vs dev later
@@ -46,6 +47,15 @@ def main():
         color=Color.BLUE,
     )
     for idx, output in enumerate(result["outputs"], start=1):
+        if isinstance(output, Exception):
+            type_print(f"[Task {idx}] ERROR: {output}\n")
+            continue
+        if isinstance(output, ChatResponse):
+            type_print(f"[Task {idx}] {output.content}\n")
+            type_print(f"[Task {idx}] {output.reasoning_content}")
+            type_print(f"[Task {idx}] {output.finish_reason}")
+            type_print(f"[Task {idx}] {output.usage}")
+            continue
         type_print(f"[Task {idx}] {output}\n")
 
 if __name__ == "__main__":

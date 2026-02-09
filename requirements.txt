@@ -6,3 +6,4 @@ torch
 transformers
 psutil
 python-docx
+httpx

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Sequence
 
-from nlp.llm.llm_client import ChatRequest, OpenAICompatChatClient
+from nlp.llm.llm_client import ChatRequest, ChatResponse, OpenAICompatChatClient
 from nlp.llm.tasks.test_parallel import run_parallel_test
 
 
@@ -31,7 +31,7 @@ class LlmService:
         seed: int | None = None,
         stop: list[str] | None = None,
         response_format: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> ChatResponse:
         return self.client.chat(
             system=system,
             user=user,
@@ -50,7 +50,7 @@ class LlmService:
         requests_: Sequence[ChatRequest],
         *,
         max_concurrency: int | None = None,
-    ) -> list[str]:
+    ) -> list[ChatResponse | Exception]:
         return await self.client.chat_many(
             requests_,
             max_concurrency=max_concurrency or self.max_parallel,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from nlp.llm.llm_client import ChatRequest
+from nlp.llm.llm_client import ChatRequest, ChatResponse
 
 if TYPE_CHECKING:
     from interfaces.config.app_config import AppConfigShape
@@ -41,16 +41,16 @@ async def run_parallel_test(
     elapsed_s = time.perf_counter() - started
 
     # Separate successes from failure
-    successful_texts = [res for res in outputs if isinstance(res, str)]
+    successful_responses = [res for res in outputs if isinstance(res, ChatResponse)]
     failed_tasks = [res for res in outputs if isinstance(res, Exception)]
 
-    total_chars = sum(len(text or "") for text in outputs)
+    total_chars = sum(len(res.content or "") for res in successful_responses)
     chars_per_second = total_chars / elapsed_s if elapsed_s > 0 else 0.0
 
     return {
         "mode": "parallel",
         "task_count": len(TASKS),
-        "success_count": len(successful_texts),
+        "success_count": len(successful_responses),
         "failure_count": len(failed_tasks),
         "max_concurrency": app_cfg.llm_server.llama_n_parallel,
         "elapsed_s": elapsed_s,

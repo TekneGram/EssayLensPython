@@ -118,10 +118,20 @@ class LlmServerProcess:
             try:
                 r = requests.get(health_url, timeout=1)
                 if r.status_code == 200:
-                    data=r.json()
-                    if data.get("status") == "ok":
+                    # Some builds/tests expose only status code on /health.
+                    # Prefer explicit health status when present, otherwise treat HTTP 200 as ready.
+                    try:
+                        data = r.json()
+                    except Exception:
                         return
-                    elif data.get("status") == "loading-model":
+                    if not isinstance(data, dict):
+                        return
+                    status = data.get("status")
+                    if status == "ok":
+                        return
+                    if status is None:
+                        return
+                    if status == "loading-model":
                         pass
             except Exception:
                 # Connection not refused but server not responding yet
