@@ -6,6 +6,8 @@ from services.explainability import ExplainabilityRecorder
 from inout.explainability_writer import ExplainabilityWriter
 from services.ged_service import GedService
 from nlp.ged.ged_bert import GedBertDetector
+from inout.docx_loader import DocxLoader
+from services.docx_output_service import DocxOutputService
 
 
 # Standard utilities
@@ -34,6 +36,16 @@ def build_container(app_cfg: AppConfig):
 
     # Determine the project root (used for resolving relative paths)
     project_root = Path(__file__).resolve().parents[1]
+
+    # ----- Input layer -----
+    loader = DocxLoader(
+        strip_whitespace=True,
+        keep_empty_paragraphs=False
+    )
+
+    docx_out = DocxOutputService(
+        author=app_cfg.run_config.author
+    )
 
     # ----- GED BERT -----
     # Load the GED BERT model and wrap the grammar detector in a service abstraction
@@ -96,7 +108,7 @@ def build_container(app_cfg: AppConfig):
     explainability = ExplainabilityRecorder.new(
         run_cfg=app_cfg.run_config,
         ged_cfg=app_cfg.ged_config,
-        llm_cfg=app_cfg.llm_config
+        llm_config=app_cfg.llm_config
     )
 
     explain_file_writer = ExplainabilityWriter(
@@ -105,6 +117,8 @@ def build_container(app_cfg: AppConfig):
 
     return {
         "project_root": project_root,
+        "loader": loader,
+        "docx_out": docx_out,
         "ged": ged_service,
         "server_bin": server_bin,
         "server_proc": server_proc,
