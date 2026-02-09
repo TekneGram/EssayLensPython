@@ -3,40 +3,17 @@ from dataclasses import dataclass, asdict
 import asyncio
 import json
 from typing import Any, AsyncIterator, Iterable, Iterator, Literal, Sequence
-try:
-    import httpx  # type: ignore
-except ImportError:
-    class _HttpxFallback:
-        class HTTPError(Exception):
-            pass
-
-        class AsyncClient:
-            def __init__(self, *args, **kwargs):
-                raise RuntimeError("httpx is not installed.")
-
-    httpx = _HttpxFallback()
+import httpx
+import requests
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from config.llm_request_config import LlmRequestConfig
 
-try:
-    import requests  # type: ignore
-except ImportError:
-    class _RequestsFallback:
-        class exceptions:
-            RequestException = RuntimeError
-
-        @staticmethod
-        def post(*args, **kwargs):
-            raise RuntimeError("requests is not installed.")
-
-    requests = _RequestsFallback()
-
-
 JSONDict = dict[str, Any]
 
 
+# ----- TYPES -----
 @dataclass(frozen=True, slots=True)
 class ChatRequest:
     system: str
@@ -83,7 +60,7 @@ class ChatStreamEvent:
     usage: dict[str, Any] | None = None
     done: bool = False
 
-
+# ----- Accumulator class for streaming -----
 @dataclass
 class ChatStreamAccumulator:
     content_parts: list[str]
@@ -120,7 +97,7 @@ class ChatStreamAccumulator:
             usage=self.usage,
         )
 
-
+# ----- Main Client Implementation -----
 @dataclass
 class OpenAICompatChatClient:
     server_url: str
@@ -145,6 +122,8 @@ class OpenAICompatChatClient:
             timeout_s=self.timeout_s,
             reasoning_mode=mode,
         )
+
+    # ----- INTERNALS -----
 
     def _prepare_user_content(self, user: str) -> str:
         if self.model_family.strip().lower() != "instruct/think":
@@ -230,32 +209,7 @@ class OpenAICompatChatClient:
             return json.loads(content)
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Malformed JSON schema response: {content}") from exc
-
-    def chat(self, system: str, user: str, **kwargs) -> ChatResponse:
-        payload = self._build_payload(system=system, user=user, **kwargs)
-
-        try:
-            response = requests.post(self.server_url, json=payload, timeout=self.timeout_s)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"LLM Server connection failed: {e}")
         
-        data = response.json()
-        return self._parse_chat_response(data)
-
-    def json_schema_chat(self, system: str, user: str, schema: dict[str, Any], **kwargs) -> Any:
-        payload = self._build_payload(system=system, user=user, **kwargs)
-        payload["response_format"] = schema
-
-        try:
-            response = requests.post(self.server_url, json=payload, timeout=self.timeout_s)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"LLM Server connection failed: {e}")
-
-        data = response.json()
-        return self._parse_json_schema_content(data)
-
     def _events_from_stream_line(
         self,
         line: str,
@@ -322,6 +276,151 @@ class OpenAICompatChatClient:
             state.add(event)
         return events, False
 
+    # ----- API: chat, chat_async, chat_many -----
+
+    def chat(self, system: str, user: str, **kwargs) -> ChatResponse:
+        payload = self._build_payload(system=system, user=user, **kwargs)
+
+        try:
+            response = requests.post(self.server_url, json=payload, timeout=self.timeout_s)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"LLM Server connection failed: {e}")
+        
+        data = response.json()
+        return self._parse_chat_response(data)
+    
+    async def chat_async(self, system: str, user: str, **kwargs) -> ChatResponse:
+        payload = self._build_payload(system=system, user=user, **kwargs)
+        print("Payload:", payload)
+
+        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+            try:
+                response = await client.post(
+                    self.server_url,
+                    json=payload
+                )
+                # Raises httpx.HTTPStatusError if response is 4xx or 5xx
+                response.raise_for_status()
+
+                data = response.json()
+                return self._parse_chat_response(data)
+            except httpx.HTTPError as exc:
+                raise RuntimeError(f"LLM Server Error: {exc}") from exc
+    
+    async def chat_many(
+            self,
+            requests_: Sequence[ChatRequest],
+            *,
+            max_concurrency: int | None = None,
+            return_exceptions: bool = True
+    ) -> list[ChatResponse | Exception]:
+        if not requests_:
+            return []
+        
+        # Local LLM servers usually handle 1 - 4 parallel requests well
+        concurrency = max_concurrency or 2
+        semaphor = asyncio.Semaphore(concurrency)
+
+        async def _one(req: ChatRequest) -> ChatResponse | Exception:
+            async with semaphor:
+                try:
+                    # Prepare the data
+                    req_data = asdict(req)
+                    system = req_data.pop("system")
+                    user = req_data.pop("user")
+
+                    # Execute call
+                    return await self.chat_async(
+                        system=system,
+                        user=user,
+                        **req_data
+                    )
+                except Exception as e:
+                    if return_exceptions:
+                        return e
+                    raise e
+        return await asyncio.gather(
+            *(_one(req) for req in requests_),
+            return_exceptions=return_exceptions
+        )
+
+    # ----- API: json_schema_chat, json_schema_chat_async, json_schema_chat_async_many -----
+
+    def json_schema_chat(self, system: str, user: str, schema: dict[str, Any], **kwargs) -> Any:
+        payload = self._build_payload(system=system, user=user, **kwargs)
+        payload["response_format"] = schema
+
+        try:
+            response = requests.post(self.server_url, json=payload, timeout=self.timeout_s)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"LLM Server connection failed: {e}")
+
+        data = response.json()
+        return self._parse_json_schema_content(data)
+    
+    async def json_schema_chat_async(
+        self,
+        system: str,
+        user: str,
+        schema: dict[str, Any],
+        **kwargs,
+    ) -> Any:
+        payload = self._build_payload(system=system, user=user, **kwargs)
+        payload["response_format"] = schema
+
+        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
+            try:
+                response = await client.post(
+                    self.server_url,
+                    json=payload
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                return self._parse_json_schema_content(data)
+            except httpx.HTTPError as exc:
+                raise RuntimeError(f"LLM Server Error: {exc}") from exc
+
+    async def json_schema_chat_many(
+            self,
+            requests_: Sequence[JsonSchemaChatRequest],
+            *,
+            max_concurrency: int | None = None,
+            return_exceptions: bool = True
+    ) -> list[Any | Exception]:
+        if not requests_:
+            return []
+
+        concurrency = max_concurrency or 2
+        semaphor = asyncio.Semaphore(concurrency)
+
+        async def _one(req: JsonSchemaChatRequest) -> Any | Exception:
+            async with semaphor:
+                try:
+                    req_data = asdict(req)
+                    system = req_data.pop("system")
+                    user = req_data.pop("user")
+                    schema = req_data.pop("schema")
+
+                    return await self.json_schema_chat_async(
+                        system=system,
+                        user=user,
+                        schema=schema,
+                        **req_data
+                    )
+                except Exception as e:
+                    if return_exceptions:
+                        return e
+                    raise e
+        return await asyncio.gather(
+            *(_one(req) for req in requests_),
+            return_exceptions=return_exceptions
+        )
+    
+    # ----- API: chat_stream, chat_stream_async -----
+
     def chat_stream(self, system: str, user: str, **kwargs) -> Iterator[ChatStreamEvent]:
         payload = self._build_payload(system=system, user=user, **kwargs)
         payload["stream"] = True
@@ -379,117 +478,3 @@ class OpenAICompatChatClient:
         for event in events:
             state.add(event)
         return state.to_response()
-    
-    async def chat_async(self, system: str, user: str, **kwargs) -> ChatResponse:
-        payload = self._build_payload(system=system, user=user, **kwargs)
-        print("Payload:", payload)
-
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-            try:
-                response = await client.post(
-                    self.server_url,
-                    json=payload
-                )
-                # Raises httpx.HTTPStatusError if response is 4xx or 5xx
-                response.raise_for_status()
-
-                data = response.json()
-                return self._parse_chat_response(data)
-            except httpx.HTTPError as exc:
-                raise RuntimeError(f"LLM Server Error: {exc}") from exc
-
-    async def json_schema_chat_async(
-        self,
-        system: str,
-        user: str,
-        schema: dict[str, Any],
-        **kwargs,
-    ) -> Any:
-        payload = self._build_payload(system=system, user=user, **kwargs)
-        payload["response_format"] = schema
-
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-            try:
-                response = await client.post(
-                    self.server_url,
-                    json=payload
-                )
-                response.raise_for_status()
-
-                data = response.json()
-                return self._parse_json_schema_content(data)
-            except httpx.HTTPError as exc:
-                raise RuntimeError(f"LLM Server Error: {exc}") from exc
-
-    async def chat_many(
-            self,
-            requests_: Sequence[ChatRequest],
-            *,
-            max_concurrency: int | None = None,
-            return_exceptions: bool = True
-    ) -> list[ChatResponse | Exception]:
-        if not requests_:
-            return []
-        
-        # Local LLM servers usually handle 1 - 4 parallel requests well
-        concurrency = max_concurrency or 2
-        semaphor = asyncio.Semaphore(concurrency)
-
-        async def _one(req: ChatRequest) -> ChatResponse | Exception:
-            async with semaphor:
-                try:
-                    # Prepare the data
-                    req_data = asdict(req)
-                    system = req_data.pop("system")
-                    user = req_data.pop("user")
-
-                    # Execute call
-                    return await self.chat_async(
-                        system=system,
-                        user=user,
-                        **req_data
-                    )
-                except Exception as e:
-                    if return_exceptions:
-                        return e
-                    raise e
-        return await asyncio.gather(
-            *(_one(req) for req in requests_),
-            return_exceptions=return_exceptions
-        )
-
-    async def json_schema_chat_many(
-            self,
-            requests_: Sequence[JsonSchemaChatRequest],
-            *,
-            max_concurrency: int | None = None,
-            return_exceptions: bool = True
-    ) -> list[Any | Exception]:
-        if not requests_:
-            return []
-
-        concurrency = max_concurrency or 2
-        semaphor = asyncio.Semaphore(concurrency)
-
-        async def _one(req: JsonSchemaChatRequest) -> Any | Exception:
-            async with semaphor:
-                try:
-                    req_data = asdict(req)
-                    system = req_data.pop("system")
-                    user = req_data.pop("user")
-                    schema = req_data.pop("schema")
-
-                    return await self.json_schema_chat_async(
-                        system=system,
-                        user=user,
-                        schema=schema,
-                        **req_data
-                    )
-                except Exception as e:
-                    if return_exceptions:
-                        return e
-                    raise e
-        return await asyncio.gather(
-            *(_one(req) for req in requests_),
-            return_exceptions=return_exceptions
-        )
