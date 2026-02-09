@@ -186,6 +186,3 @@ class LlmService:
         sys.stdout.write("\n")
         sys.stdout.flush()
         return state.to_response()
-
-    async def run_parallel_kv_cache_test(self, app_cfg: Any) -> dict[str, Any]:
-        return await run_parallel_test(self, app_cfg)
