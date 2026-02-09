@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 import asyncio
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 import httpx
 
 from typing import TYPE_CHECKING
@@ -40,8 +40,38 @@ class ChatRequest:
 class OpenAICompatChatClient:
     server_url: str
     model_name: str
+    model_family: str
     request_cfg: LlmRequestConfig
     timeout_s: float = 120.0
+    reasoning_mode: Literal["default", "think", "no_think"] = "default"
+
+    def with_reasoning_mode(
+        self,
+        mode: Literal["default", "think", "no_think"],
+    ) -> "OpenAICompatChatClient":
+        allowed_modes = {"default", "think", "no_think"}
+        if mode not in allowed_modes:
+            raise ValueError(f"Unsupported reasoning mode: {mode}")
+        return OpenAICompatChatClient(
+            server_url=self.server_url,
+            model_name=self.model_name,
+            model_family=self.model_family,
+            request_cfg=self.request_cfg,
+            timeout_s=self.timeout_s,
+            reasoning_mode=mode,
+        )
+
+    def _prepare_user_content(self, user: str) -> str:
+        if self.model_family.strip().lower() != "instruct/think":
+            return user
+
+        if self.reasoning_mode == "think":
+            return f"{user} /think"
+        if self.reasoning_mode == "no_think":
+            return f"{user} /no_think"
+        raise ValueError(
+            "reasoning_mode must be 'think' or 'no_think' for model_family='instruct/think'."
+        )
 
     def _build_payload(
             self,
@@ -49,12 +79,14 @@ class OpenAICompatChatClient:
             user: str,
             **kwargs
     ) -> JSONDict:
+        prompt_user = self._prepare_user_content(user)
+
         # Start with the core required fields
         payload: JSONDict = {
             "model": self.model_name,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": user}
+                {"role": "user", "content": prompt_user}
             ],
         }
 

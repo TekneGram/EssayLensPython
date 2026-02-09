@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 from nlp.llm.llm_client import ChatRequest, OpenAICompatChatClient
 from nlp.llm.tasks.test_parallel import run_parallel_test
@@ -11,6 +11,12 @@ from nlp.llm.tasks.test_parallel import run_parallel_test
 class LlmService:
     client: OpenAICompatChatClient
     max_parallel: int | None = None
+
+    def with_mode(self, mode: Literal["default", "think", "no_think"]) -> "LlmService":
+        return LlmService(
+            client=self.client.with_reasoning_mode(mode),
+            max_parallel=self.max_parallel,
+        )
 
     def chat(
         self,

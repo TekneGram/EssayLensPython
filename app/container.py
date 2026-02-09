@@ -79,6 +79,7 @@ def build_container(app_cfg: AppConfig):
         client = OpenAICompatChatClient(
             server_url=app_cfg.llm_server.llama_server_url,
             model_name=app_cfg.llm_config.llama_model_alias,
+            model_family=app_cfg.llm_config.llama_model_family,
             request_cfg=app_cfg.llm_request,
         )
         llm_service = LlmService(

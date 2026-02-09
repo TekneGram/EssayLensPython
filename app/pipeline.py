@@ -24,4 +24,5 @@ class TestPipeline():
     llm: "LlmService"
 
     def run_test(self, app_cfg:AppConfigShape):
-        return asyncio.run(self.llm.run_parallel_kv_cache_test(app_cfg))
+        llm_no_think = self.llm.with_mode("no_think")
+        return asyncio.run(llm_no_think.run_parallel_kv_cache_test(app_cfg))
