@@ -8,12 +8,14 @@ from config.assessment_paths_config import AssessmentPathsConfig
 from config.llm_config import LlmConfig
 from config.ged_config import GedConfig
 from config.run_config import RunConfig
+from config.ocr_config import OcrConfig
 
 
 @dataclass(frozen=True, slots=True)
 class AppConfig:
     assessment_paths: AssessmentPathsConfig
     llm_config: LlmConfig
+    ocr_config: OcrConfig
     llm_server: LlmServerConfig
     llm_request: LlmRequestConfig
     ged_config: GedConfig
@@ -43,6 +45,18 @@ def build_settings() -> AppConfig:
         llama_model_family="instruct",
     )
     llm_config.validate(allow_unresolved_model_paths=True)
+
+    ocr_config = OcrConfig.from_strings(
+        hf_repo_id=None,
+        hf_filename=None,
+        hf_revision=None,
+        hf_mmproj_filename=None,
+        ocr_gguf_path="",
+        ocr_mmproj_path="",
+        ocr_model_key="default_ocr",
+        ocr_model_display_name="Default OCR Model",
+    )
+    ocr_config.validate(allow_unresolved_model_paths=True)
 
     llm_server = LlmServerConfig.from_strings(
         llama_backend="server",
@@ -94,6 +108,7 @@ def build_settings() -> AppConfig:
     return AppConfig(
         assessment_paths=assessment_paths,
         llm_config=llm_config,
+        ocr_config=ocr_config,
         llm_server=llm_server,
         llm_request=llm_request,
         ged_config=ged_config,
