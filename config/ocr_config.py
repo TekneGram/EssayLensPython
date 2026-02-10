@@ -12,8 +12,11 @@ class OcrConfig:
     hf_mmproj_filename: str | None = None
     ocr_gguf_path: Path | None = None
     ocr_mmproj_path: Path | None = None
+    ocr_server_model: str = ""
     ocr_model_key: str = ""
     ocr_model_display_name: str = ""
+    ocr_model_alias: str = ""
+    ocr_model_family: str = ""
 
     @staticmethod
     def from_strings(
@@ -23,8 +26,11 @@ class OcrConfig:
         hf_mmproj_filename: str | None = None,
         ocr_gguf_path: str | Path | None = None,
         ocr_mmproj_path: str | Path | None = None,
+        ocr_server_model: str = "",
         ocr_model_key: str = "",
         ocr_model_display_name: str = "",
+        ocr_model_alias: str = "",
+        ocr_model_family: str = "",
     ) -> "OcrConfig":
         return OcrConfig(
             hf_repo_id=OcrConfig._norm_optional_text(hf_repo_id),
@@ -33,15 +39,22 @@ class OcrConfig:
             hf_mmproj_filename=OcrConfig._norm_optional_text(hf_mmproj_filename),
             ocr_gguf_path=OcrConfig._norm_optional_path(ocr_gguf_path),
             ocr_mmproj_path=OcrConfig._norm_optional_path(ocr_mmproj_path),
+            ocr_server_model=ocr_server_model,
             ocr_model_key=ocr_model_key,
             ocr_model_display_name=ocr_model_display_name,
+            ocr_model_alias=ocr_model_alias,
+            ocr_model_family=ocr_model_family,
         )
 
     def validate(self, allow_unresolved_model_paths: bool = False) -> None:
-        for field_name, value in [
+        required_strings: list[tuple[str, str]] = [
+            ("ocr_server_model", self.ocr_server_model),
             ("ocr_model_key", self.ocr_model_key),
             ("ocr_model_display_name", self.ocr_model_display_name),
-        ]:
+            ("ocr_model_alias", self.ocr_model_alias),
+            ("ocr_model_family", self.ocr_model_family),
+        ]
+        for field_name, value in required_strings:
             if not value or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
 
