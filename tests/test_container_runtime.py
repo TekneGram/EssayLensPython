@@ -15,6 +15,7 @@ from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
 from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
+from config.sustainability_config import SustainabilityConfig
 
 
 def _build_app_cfg(root: Path) -> AppConfig:
@@ -75,6 +76,7 @@ def _build_app_cfg(root: Path) -> AppConfig:
         ),
         ged_config=GedConfig.from_strings(model_name="ged-model"),
         run_config=RunConfig.from_strings(author="tester"),
+        sustainability_config=SustainabilityConfig.from_values(),
     )
 
 
@@ -109,6 +111,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             explain_new.assert_called_once()
             self.assertIn("llm_service", container)
             self.assertIsNotNone(container["llm_service"])
+            self.assertIn("sustainability", container)
 
     def test_build_container_skips_llm_wiring_when_backend_not_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -135,6 +138,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             service_cls.assert_not_called()
             self.assertIsNone(container["server_proc"])
             self.assertIsNone(container["llm_service"])
+            self.assertIn("sustainability", container)
 
 
 if __name__ == "__main__":

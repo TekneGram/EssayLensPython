@@ -26,6 +26,7 @@ from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
 from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
+from config.sustainability_config import SustainabilityConfig
 
 
 class SelectModelHelpersTests(unittest.TestCase):
@@ -188,6 +189,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
                     run_config=RunConfig.from_strings(author="tester"),
+                    sustainability_config=SustainabilityConfig.from_values(),
                 )
 
                 with patch(
@@ -280,6 +282,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
                     run_config=RunConfig.from_strings(author="tester"),
+                    sustainability_config=SustainabilityConfig.from_values(),
                 )
 
                 with patch(
@@ -369,6 +372,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
                     run_config=RunConfig.from_strings(author="tester"),
+                    sustainability_config=SustainabilityConfig.from_values(),
                 )
 
                 captured_specs: dict[str, list[str]] = {}
@@ -464,6 +468,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
                     run_config=RunConfig.from_strings(author="tester"),
+                    sustainability_config=SustainabilityConfig.from_values(),
                 )
 
                 captured_specs: dict[str, list[str]] = {}
@@ -561,6 +566,7 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
                     run_config=RunConfig.from_strings(author="tester"),
+                    sustainability_config=SustainabilityConfig.from_values(),
                 )
 
                 captured_specs: dict[str, list[str]] = {}
