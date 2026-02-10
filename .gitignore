@@ -94,5 +94,12 @@ transformers_cache/
 # Corpus files
 Assessment
 
+# Agents
+.utilities
+Agents.md
+agent_ocr_integration.md
+agent_rehearsal.md
+agent_rehearsal2.md
+
 # Keep this file
 !.gitignore
