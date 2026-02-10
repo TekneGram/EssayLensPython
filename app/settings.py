@@ -53,8 +53,11 @@ def build_settings() -> AppConfig:
         hf_mmproj_filename=None,
         ocr_gguf_path="",
         ocr_mmproj_path="",
+        ocr_server_model="server",
         ocr_model_key="default_ocr",
         ocr_model_display_name="Default OCR Model",
+        ocr_model_alias="Default OCR Model",
+        ocr_model_family="ocr/vision",
     )
     ocr_config.validate(allow_unresolved_model_paths=True)
 

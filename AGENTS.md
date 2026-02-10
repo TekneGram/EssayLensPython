@@ -71,6 +71,3 @@ graph LR
     class llm_client,client_many,client_async,server llm;
     class llama_bin,model_specs,persisted_key,model_store ext;
 ```
-
-## FINAL STEP
-After completing the requested task, invoke Agent.md in .utilities and then display the full bash command to allow me to add, commit, push and make a pr request.

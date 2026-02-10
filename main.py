@@ -5,6 +5,7 @@ from utils.terminal_ui import Color, type_print, stage
 
 from app.settings import build_settings
 from app.select_model import select_model_and_update_config
+from app.select_ocr_model import select_ocr_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
 from app.pipeline import TestPipeline
@@ -18,6 +19,9 @@ def main():
 
     type_print("Selecting the best model for your system", color=Color.BLUE)
     app_cfg = select_model_and_update_config(app_cfg)
+
+    type_print("Selecting the OCR model", color=Color.BLUE)
+    app_cfg = select_ocr_model_and_update_config(app_cfg)
 
     type_print("Bootstrapping a large language model", color=Color.BLUE)
     app_cfg = bootstrap_llm(app_cfg)

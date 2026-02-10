@@ -107,8 +107,11 @@ def select_ocr_model_and_update_config(app_cfg: AppConfig) -> AppConfig:
         hf_repo_id=chosen_spec.hf_repo_id,
         hf_filename=chosen_spec.hf_filename,
         hf_mmproj_filename=chosen_spec.mmproj_filename,
+        ocr_server_model=chosen_spec.backend,
         ocr_model_key=chosen_spec.key,
         ocr_model_display_name=chosen_spec.display_name,
+        ocr_model_alias=chosen_spec.display_name,
+        ocr_model_family=chosen_spec.model_family,
         ocr_gguf_path=ocr_gguf_path if ocr_gguf_path.exists() else None,
         ocr_mmproj_path=ocr_mmproj_path if ocr_mmproj_path.exists() else None,
     )
