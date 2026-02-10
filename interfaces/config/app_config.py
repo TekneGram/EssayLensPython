@@ -8,6 +8,7 @@ from config.llm_config import LlmConfig
 from config.run_config import RunConfig
 from config.ged_config import GedConfig
 from config.ocr_config import OcrConfig
+from config.sustainability_config import SustainabilityConfig
 
 @dataclass(frozen=True)
 class AppConfigShape:
@@ -18,3 +19,4 @@ class AppConfigShape:
     llm_request: LlmRequestConfig
     run_config: RunConfig
     ged_config: GedConfig
+    sustainability_config: SustainabilityConfig

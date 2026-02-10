@@ -1,4 +1,5 @@
 # Import services and processes
+import shutil
 from nlp.llm.llm_server_process import LlmServerProcess
 from nlp.llm.llm_client import OpenAICompatChatClient
 from services.llm_service import LlmService
@@ -8,6 +9,8 @@ from services.ged_service import GedService
 from nlp.ged.ged_bert import GedBertDetector
 from inout.docx_loader import DocxLoader
 from services.docx_output_service import DocxOutputService
+from services.power_sampler import NullPowerSampler, PowermetricsPowerSampler
+from services.sustainability_service import Sustainability
 
 
 # Standard utilities
@@ -23,6 +26,25 @@ def _resolve_path(p: str | Path, project_root: Path) -> Path:
     """
     pp = Path(p).expanduser()
     return pp if pp.is_absolute() else (project_root / pp).resolve()
+
+
+def _build_power_sampler(app_cfg: AppConfig):
+    cfg = app_cfg.sustainability_config
+    if not cfg.enabled or cfg.power_backend == "none":
+        return NullPowerSampler()
+
+    command_exists = shutil.which(cfg.powermetrics_command) is not None
+    if not command_exists:
+        sampler = NullPowerSampler()
+        sampler.add_diagnostic(
+            f"powermetrics command not found: {cfg.powermetrics_command}"
+        )
+        return sampler
+
+    return PowermetricsPowerSampler(
+        command=cfg.powermetrics_command,
+        sample_interval_s=cfg.sample_interval_s,
+    )
 
 def build_container(app_cfg: AppConfig):
     """
@@ -123,6 +145,11 @@ def build_container(app_cfg: AppConfig):
         app_cfg.assessment_paths.explained_folder
     )
 
+    sustainability = Sustainability(
+        cfg=app_cfg.sustainability_config,
+        sampler=_build_power_sampler(app_cfg),
+    )
+
     return {
         "project_root": project_root,
         "loader": loader,
@@ -135,5 +162,6 @@ def build_container(app_cfg: AppConfig):
         "llm_client": client,
         "llm_service": llm_service,
         "explain": explainability,
-        "explain_file_writer": explain_file_writer
+        "explain_file_writer": explain_file_writer,
+        "sustainability": sustainability,
     }

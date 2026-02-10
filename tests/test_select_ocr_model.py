@@ -22,6 +22,7 @@ from config.llm_server_config import LlmServerConfig
 from config.ocr_config import OcrConfig
 from config.ocr_model_spec import OcrModelSpec
 from config.run_config import RunConfig
+from config.sustainability_config import SustainabilityConfig
 
 
 def _build_app_cfg(root: Path) -> AppConfig:
@@ -86,6 +87,7 @@ def _build_app_cfg(root: Path) -> AppConfig:
         ),
         ged_config=GedConfig.from_strings(model_name="ged-model"),
         run_config=RunConfig.from_strings(author="tester"),
+        sustainability_config=SustainabilityConfig.from_values(),
     )
 
 

@@ -24,6 +24,7 @@ from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
 from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
+from config.sustainability_config import SustainabilityConfig
 
 
 def _build_app_cfg(root: Path) -> AppConfig:
@@ -85,6 +86,7 @@ def _build_app_cfg(root: Path) -> AppConfig:
         ),
         ged_config=GedConfig.from_strings(model_name="gotutiyan/token-ged-bert-large-cased-bin"),
         run_config=RunConfig.from_strings(author="tester"),
+        sustainability_config=SustainabilityConfig.from_values(),
     )
 
 
@@ -175,6 +177,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
+                sustainability_config=cfg.sustainability_config,
             )
 
             with patch("app.bootstrap_llm.hf_hub_download") as mocked:
@@ -217,6 +220,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
+                sustainability_config=cfg.sustainability_config,
             )
             with self.assertRaises(RuntimeError):
                 ensure_gguf(cfg, root / ".appdata" / "models")
@@ -248,6 +252,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
+                sustainability_config=cfg.sustainability_config,
             )
 
             def _fake_download(**kwargs):
@@ -291,6 +296,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
+                sustainability_config=cfg.sustainability_config,
             )
             with self.assertRaises(RuntimeError):
                 ensure_llm_server_bin(cfg)
@@ -319,6 +325,7 @@ class BootstrapLlmTests(unittest.TestCase):
                     ocr_config=cfg.ocr_config,
                     ged_config=cfg.ged_config,
                     run_config=cfg.run_config,
+                sustainability_config=cfg.sustainability_config,
                 )
 
                 def _fake_download(**kwargs):

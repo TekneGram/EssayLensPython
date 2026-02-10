@@ -9,6 +9,7 @@ from config.llm_config import LlmConfig
 from config.ged_config import GedConfig
 from config.run_config import RunConfig
 from config.ocr_config import OcrConfig
+from config.sustainability_config import SustainabilityConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,7 @@ class AppConfig:
     llm_request: LlmRequestConfig
     ged_config: GedConfig
     run_config: RunConfig
+    sustainability_config: SustainabilityConfig
 
 def build_settings() -> AppConfig:
 
@@ -108,6 +110,15 @@ def build_settings() -> AppConfig:
     )
     run_config.validate()
 
+    sustainability_config = SustainabilityConfig.from_values(
+        enabled=True,
+        carbon_intensity_g_per_kwh=475.0,
+        sample_interval_s=0.25,
+        power_backend="powermetrics",
+        powermetrics_command="powermetrics",
+    )
+    sustainability_config.validate()
+
     return AppConfig(
         assessment_paths=assessment_paths,
         llm_config=llm_config,
@@ -115,5 +126,6 @@ def build_settings() -> AppConfig:
         llm_server=llm_server,
         llm_request=llm_request,
         ged_config=ged_config,
-        run_config=run_config
+        run_config=run_config,
+        sustainability_config=sustainability_config
     )
