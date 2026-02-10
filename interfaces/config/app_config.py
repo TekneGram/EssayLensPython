@@ -7,11 +7,13 @@ from config.assessment_paths_config import AssessmentPathsConfig
 from config.llm_config import LlmConfig
 from config.run_config import RunConfig
 from config.ged_config import GedConfig
+from config.ocr_config import OcrConfig
 
 @dataclass(frozen=True)
 class AppConfigShape:
     assessment_paths: AssessmentPathsConfig
     llm_config: LlmConfig
+    ocr_config: OcrConfig
     llm_server: LlmServerConfig
     llm_request: LlmRequestConfig
     run_config: RunConfig
