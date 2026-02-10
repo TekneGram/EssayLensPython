@@ -7,3 +7,4 @@ transformers
 psutil
 python-docx
 httpx
+pypdf
