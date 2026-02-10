@@ -5,9 +5,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from inout.pdf_loader import PdfLoader
+PDF_LOADER_AVAILABLE = True
+try:
+    from inout.pdf_loader import PdfLoader
+except ModuleNotFoundError:
+    PDF_LOADER_AVAILABLE = False
 
 
+@unittest.skipUnless(PDF_LOADER_AVAILABLE, "pypdf is required for PdfLoader runtime tests.")
 class PdfLoaderRuntimeTests(unittest.TestCase):
     def _make_pdf_placeholder(self, root: Path, name: str = "sample.pdf") -> Path:
         path = root / name

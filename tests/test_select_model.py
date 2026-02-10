@@ -24,6 +24,7 @@ from config.llm_config import LlmConfig
 from config.llm_model_spec import LlmModelSpec
 from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
+from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
 
 
@@ -176,6 +177,13 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         response_format=None,
                         stream=False,
                     ),
+                    ocr_config=OcrConfig.from_strings(
+                        ocr_server_model="server",
+                        ocr_model_key="ocr-default",
+                        ocr_model_display_name="Default OCR",
+                        ocr_model_alias="Default OCR",
+                        ocr_model_family="ocr/vision",
+                    ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
@@ -192,6 +200,8 @@ class SelectModelIntegrationTests(unittest.TestCase):
                     ),
                 ), patch("app.select_model.prompt_initial_action") as mock_initial_prompt, patch(
                     "builtins.input", side_effect=[""]
+                ), patch(
+                    "builtins.print"
                 ):
                     updated = select_model_and_update_config(app_cfg)
 
@@ -259,6 +269,13 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         response_format=None,
                         stream=False,
                     ),
+                    ocr_config=OcrConfig.from_strings(
+                        ocr_server_model="server",
+                        ocr_model_key="ocr-default",
+                        ocr_model_display_name="Default OCR",
+                        ocr_model_alias="Default OCR",
+                        ocr_model_family="ocr/vision",
+                    ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
@@ -275,6 +292,8 @@ class SelectModelIntegrationTests(unittest.TestCase):
                     ),
                 ), patch("app.select_model.prompt_initial_action") as mock_initial_prompt, patch(
                     "builtins.input", side_effect=[""]
+                ), patch(
+                    "builtins.print"
                 ):
                     updated = select_model_and_update_config(app_cfg)
 
@@ -339,6 +358,13 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         response_format=None,
                         stream=False,
                     ),
+                    ocr_config=OcrConfig.from_strings(
+                        ocr_server_model="server",
+                        ocr_model_key="ocr-default",
+                        ocr_model_display_name="Default OCR",
+                        ocr_model_alias="Default OCR",
+                        ocr_model_family="ocr/vision",
+                    ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
@@ -362,6 +388,8 @@ class SelectModelIntegrationTests(unittest.TestCase):
                 ), patch("app.select_model.prompt_initial_action", return_value="download"), patch(
                     "app.select_model.prompt_model_choice_from_list",
                     side_effect=_capture_choice,
+                ), patch(
+                    "builtins.print"
                 ):
                     select_model_and_update_config(app_cfg)
 
@@ -425,6 +453,13 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         response_format=None,
                         stream=False,
                     ),
+                    ocr_config=OcrConfig.from_strings(
+                        ocr_server_model="server",
+                        ocr_model_key="ocr-default",
+                        ocr_model_display_name="Default OCR",
+                        ocr_model_alias="Default OCR",
+                        ocr_model_family="ocr/vision",
+                    ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
@@ -448,6 +483,8 @@ class SelectModelIntegrationTests(unittest.TestCase):
                 ), patch("app.select_model.prompt_initial_action", return_value="select"), patch(
                     "app.select_model.prompt_model_choice_from_list",
                     side_effect=_capture_choice,
+                ), patch(
+                    "builtins.print"
                 ):
                     select_model_and_update_config(app_cfg)
 
@@ -513,6 +550,13 @@ class SelectModelIntegrationTests(unittest.TestCase):
                         response_format=None,
                         stream=False,
                     ),
+                    ocr_config=OcrConfig.from_strings(
+                        ocr_server_model="server",
+                        ocr_model_key="ocr-default",
+                        ocr_model_display_name="Default OCR",
+                        ocr_model_alias="Default OCR",
+                        ocr_model_family="ocr/vision",
+                    ),
                     ged_config=GedConfig.from_strings(
                         model_name="gotutiyan/token-ged-bert-large-cased-bin"
                     ),
@@ -536,6 +580,8 @@ class SelectModelIntegrationTests(unittest.TestCase):
                 ), patch("app.select_model.prompt_initial_action", return_value="download"), patch(
                     "app.select_model.prompt_model_choice_from_list",
                     side_effect=_capture_choice,
+                ), patch(
+                    "builtins.print"
                 ):
                     select_model_and_update_config(app_cfg)
 

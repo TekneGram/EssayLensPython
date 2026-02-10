@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import uuid
@@ -24,7 +24,7 @@ class IncrementalTrackChangesEditor:
 
     def __post_init__(self) -> None:
         if self.date is None:
-            self.date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def create_or_load_document(self, output_path: str | Path) -> Document:
         path = Path(output_path)

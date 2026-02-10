@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import difflib
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from docx import Document
@@ -24,7 +24,7 @@ class TrackChangesEditor:
 
     def __post_init__(self) -> None:
         if self.date is None:
-            self.date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @classmethod
     def split_into_sentences(cls, text: str) -> List[str]:

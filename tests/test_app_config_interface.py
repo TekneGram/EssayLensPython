@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app.settings import AppConfig
 from app.settings import build_settings
@@ -14,7 +14,16 @@ class AppConfigInterfaceTests(unittest.TestCase):
 
     def test_container_smoke_call(self) -> None:
         cfg = build_settings()
-        with patch("app.container.LlmServerProcess.start", return_value=None):
+        with patch("app.container.LlmServerProcess.start", return_value=None), patch(
+            "app.container.GedBertDetector",
+            return_value=MagicMock(),
+        ), patch(
+            "app.container.DocxOutputService",
+            return_value=MagicMock(),
+        ), patch(
+            "app.container.DocxLoader",
+            return_value=MagicMock(),
+        ):
             container = build_container(cfg)
         self.assertIn("project_root", container)
         self.assertIn("server_bin", container)

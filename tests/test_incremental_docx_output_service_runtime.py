@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +13,12 @@ try:
     from services.incremental_docx_state_store import IncrementalDocxStateStore, StateStoreError
 except ModuleNotFoundError:
     DOCX_AVAILABLE = False
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"datetime\.datetime\.utcnow\(\) is deprecated.*",
+    category=DeprecationWarning,
+)
 
 
 @dataclass

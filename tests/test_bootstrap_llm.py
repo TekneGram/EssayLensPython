@@ -22,6 +22,7 @@ from config.ged_config import GedConfig
 from config.llm_config import LlmConfig
 from config.llm_request_config import LlmRequestConfig
 from config.llm_server_config import LlmServerConfig
+from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
 
 
@@ -74,6 +75,13 @@ def _build_app_cfg(root: Path) -> AppConfig:
             stop=None,
             response_format=None,
             stream=False,
+        ),
+        ocr_config=OcrConfig.from_strings(
+            ocr_server_model="server",
+            ocr_model_key="ocr-default",
+            ocr_model_display_name="Default OCR",
+            ocr_model_alias="Default OCR",
+            ocr_model_family="ocr/vision",
         ),
         ged_config=GedConfig.from_strings(model_name="gotutiyan/token-ged-bert-large-cased-bin"),
         run_config=RunConfig.from_strings(author="tester"),
@@ -164,6 +172,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
             )
@@ -205,6 +214,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
             )
@@ -235,6 +245,7 @@ class BootstrapLlmTests(unittest.TestCase):
                 ),
                 llm_server=cfg.llm_server,
                 llm_request=cfg.llm_request,
+                ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
             )
@@ -277,6 +288,7 @@ class BootstrapLlmTests(unittest.TestCase):
                     llama_flash_attn=cfg.llm_server.llama_flash_attn,
                 ),
                 llm_request=cfg.llm_request,
+                ocr_config=cfg.ocr_config,
                 ged_config=cfg.ged_config,
                 run_config=cfg.run_config,
             )
@@ -304,6 +316,7 @@ class BootstrapLlmTests(unittest.TestCase):
                     ),
                     llm_server=cfg.llm_server,
                     llm_request=cfg.llm_request,
+                    ocr_config=cfg.ocr_config,
                     ged_config=cfg.ged_config,
                     run_config=cfg.run_config,
                 )
