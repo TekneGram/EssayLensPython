@@ -1,9 +1,9 @@
-def print_hello_world() -> None:
+def print_hello() -> None:
     print("Hello world")
 
 
 def main() -> None:
-    print_hello_world()
+    print_hello()
 
 
 if __name__ == "__main__":
