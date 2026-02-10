@@ -1,3 +1,5 @@
+"""Goodbye world rehearsal script."""
+
 def print_goodbye_world():
     print("Goodbye world")
 
