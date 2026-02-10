@@ -4,6 +4,7 @@ This app is a local essay-processing pipeline. It loads essay content, applies g
 ## Folder Structure
 ```text
 EssayLensPython/
+├── .utilities/         # local git/PR helper docs and scripts
 ├── app/                # app bootstrap, settings, model selection, container, pipeline wiring
 ├── architecture/       # flowcharts and architecture docs
 ├── config/             # typed config dataclasses and model specs
@@ -12,9 +13,12 @@ EssayLensPython/
 ├── interfaces/         # interface and shape definitions
 ├── nlp/
 │   ├── ged/            # grammar error detection modules
-│   └── llm/            # LLM client/server process and llm task helpers
+│   ├── llm/            # LLM client/server process and llm task helpers
+│   └── ocr/            # OCR client/server process helpers
 ├── services/           # service layer wrapping NLP and output operations
+├── third_party/        # vendored dependencies (e.g., llama.cpp source)
 ├── tests/              # unit/runtime tests
+├── utils/              # terminal/ui helper utilities
 ├── main.py             # CLI entrypoint
 └── requirements.txt
 ```
@@ -27,25 +31,31 @@ graph LR
     classDef runner fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
     classDef pipe fill:#fff3e0,stroke:#e65100,stroke-width:2px;
     classDef llm fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
+    classDef ocr fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px;
     classDef ext fill:#eceff1,stroke:#263238,stroke-dasharray: 5 5;
 
     subgraph CLI_Runner [CLI Runner]
         user((Developer)) --> run[main.py]
         run --> settings[build_settings]
-        run --> chooser[select_model_and_update_config]
-        run --> bootstrap[bootstrap_llm]
+        run --> llm_chooser[select_model_and_update_config]
+        run --> ocr_chooser[select_ocr_model_and_update_config]
+        run --> llm_bootstrap[bootstrap_llm]
         run --> container[build_container]
         run --> pipeline[TestPipeline.run_test_again]
     end
 
-    chooser --> model_specs[config.llm_model_spec]
-    chooser --> persisted_key[.appdata/config/llm_model.json]
-    bootstrap --> model_store[.appdata/models]
+    llm_chooser --> llm_model_specs[config.llm_model_spec]
+    llm_chooser --> llm_persisted_key[.appdata/config/llm_model.json]
+    ocr_chooser --> ocr_model_specs[config.ocr_model_spec]
+    ocr_chooser --> ocr_persisted_key[.appdata/config/ocr_model.json]
+    ocr_chooser --> model_store[.appdata/models]
+    llm_bootstrap --> model_store
 
     subgraph Container_Wiring [Container Wiring]
         container --> server[LlmServerProcess.start]
         container --> llm_client[OpenAICompatChatClient]
         container --> llm_service[LlmService]
+        container --> ocr_paths[ocr_model_path + ocr_mmproj_path]
     end
 
     subgraph Pipeline_Engine [Pipeline Engine]
@@ -66,8 +76,11 @@ graph LR
     llama_bin --> model_store
     run --> output[type_print output loop]
 
-    class run,settings,chooser,bootstrap,container runner;
+    class run,settings,llm_chooser,ocr_chooser,llm_bootstrap,container runner;
     class pipeline,mode,task_builder,req_build,llm_service,chat_many,output pipe;
     class llm_client,client_many,client_async,server llm;
-    class llama_bin,model_specs,persisted_key,model_store ext;
+    class ocr_paths ocr;
+    class llama_bin,llm_model_specs,llm_persisted_key,ocr_model_specs,ocr_persisted_key,model_store ext;
 ```
+# FINAL STEP
+Once finished, invoke the Agent.md file in ./.utilities and follow the commands, giving me the full shell command so that I can copy and paste it into the terminal.
