@@ -3,20 +3,7 @@ from dataclasses import dataclass
 import subprocess
 import time
 from typing import TYPE_CHECKING
-
-try:
-    import requests  # type: ignore
-except ImportError:
-    class _RequestsFallback:
-        @staticmethod
-        def post(*args, **kwargs):
-            raise RuntimeError("requests is not installed.")
-
-        @staticmethod
-        def get(*args, **kwargs):
-            raise RuntimeError("requests is not installed.")
-
-    requests = _RequestsFallback()
+import requests
 
 if TYPE_CHECKING:
     from config.llm_server_config import LlmServerConfig
@@ -59,6 +46,12 @@ class LlmServerProcess:
 
         if not self.llm_cfg.llama_gguf_path.exists():
             raise FileNotFoundError(f"llm gguf not found: {self.llm_cfg.llama_gguf_path}")
+        
+        if self.llm_cfg.llama_mmproj_path is not None:
+            if not self.llm_cfg.llama_mmproj_path.exists():
+                raise FileNotFoundError(f"llm mmproj not found: {self.llm_cfg.llama_mmproj_path}")
+            if not self.llm_cfg.llama_mmproj_path.is_file():
+                raise FileNotFoundError(f"llm mmproj is not a file: {self.llm_cfg.llama_mmproj_path}")
 
         cmd = [
             str(self.server_cfg.llama_server_path),
@@ -67,6 +60,8 @@ class LlmServerProcess:
             "--port", str(self.server_cfg.llama_port),
             "-c", str(self.server_cfg.llama_n_ctx),
         ]
+        if self.llm_cfg.llama_mmproj_path is not None:
+            cmd.extend(["--mmproj", str(self.llm_cfg.llama_mmproj_path)])
         if self.server_cfg.llama_n_threads is not None:
             cmd.extend(["-t", str(self.server_cfg.llama_n_threads)])
         if self.server_cfg.llama_n_gpu_layers is not None:
