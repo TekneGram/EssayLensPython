@@ -1,3 +1,5 @@
+"""Minimal hello-world entrypoint used for git workflow rehearsal."""
+
 def print_hello_world() -> None:
     print("Hello world")
 
