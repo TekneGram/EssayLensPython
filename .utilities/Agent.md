@@ -65,3 +65,5 @@ Example:
     "<commit body>" \
     "<pr title>" \
     "<pr description>"
+
+After completing, print out the full bash command line so I can run the script.
