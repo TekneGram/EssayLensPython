@@ -95,11 +95,11 @@ transformers_cache/
 Assessment
 
 # Agents
-.utilities
-agent_rehearsal.md
-agent_rehearsal_2.md
-./gitpractice
-agent_ocr.md
+# .utilities
+# agent_rehearsal.md
+# agent_rehearsal_2.md
+# ./gitpractice
+# agent_ocr.md
 
 # Keep this file
 !.gitignore
