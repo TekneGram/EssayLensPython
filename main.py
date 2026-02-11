@@ -9,9 +9,9 @@ from app.select_ocr_model import select_ocr_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
 from app.pipeline_prep import PrepPipeline
+from app.pipeline_metadata import MetadataPipeline
 from app.runtime_lifecycle import RuntimeLifecycle
 
-from app.pipeline import TestPipeline
 from nlp.llm.llm_client import ChatResponse, JsonSchemaChatRequest
 from nlp.llm.tasks.test_sequential import run_sequential_stream_demo
 
@@ -67,7 +67,13 @@ def main():
     # ----- METADATA EXTRACTION STAGE -----
     # Run the metadata extraction
     metadata_pipeline = MetadataPipeline(
-        
+        discovered_inputs=discovered_inputs,
+        runtime_lifecycle=runtime_lifecycle,
+        llm_server_proc=deps.get("server_proc"),
+        llm_service=deps.get("llm_service"),
+        explainability=deps.get("explain"),
+        explain_file_writer=deps.get("explain_file_writer"),
+        docx_out_service=deps.get("docx_out_service")
     )
 
     # Run all the LLM work next.
