@@ -46,7 +46,12 @@ def main():
     deps = build_container(app_cfg)
 
     # Preparation stage (involves using OCR)
-    # prep_pipeline = PrepPipeline(deps)
+    prep_pipeline = PrepPipeline(
+        deps["project_root"],
+        deps["input_discovery_service"],
+        deps["document_input_service"],
+        deps["docx_out_service"]
+    )
 
     # Run all the LLM work next.
 

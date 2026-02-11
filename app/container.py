@@ -11,6 +11,7 @@ from inout.docx_loader import DocxLoader
 from inout.pdf_loader import PdfLoader
 from services.docx_output_service import DocxOutputService
 from services.document_input_service import DocumentInputService
+from services.input_discovery_service import InputDiscoveryService
 from services.power_sampler import NullPowerSampler, PowermetricsPowerSampler
 from services.sustainability_service import Sustainability
 
@@ -78,12 +79,15 @@ def build_container(app_cfg: AppConfig):
         strip_whitespace=True,
         keep_empty_pages=False,
     )
-    document_input = DocumentInputService(
+    document_input_service = DocumentInputService(
         docx_loader=docx_loader,
         pdf_loader=pdf_loader,
     )
+    input_discovery_service = InputDiscoveryService(
+        input_root=app_cfg.assessment_paths.input_folder,
+    )
 
-    docx_out = DocxOutputService(
+    docx_out_service = DocxOutputService(
         author=app_cfg.run_config.author
     )
 
@@ -162,8 +166,9 @@ def build_container(app_cfg: AppConfig):
 
     return {
         "project_root": project_root,
-        "document_input": document_input,
-        "docx_out": docx_out,
+        "input_discovery_service": input_discovery_service,
+        "document_input_service": document_input_service,
+        "docx_out_service": docx_out_service,
         "ged": ged_service,
         "ocr_model_path": ocr_model_path,
         "ocr_mmproj_path": ocr_mmproj_path,

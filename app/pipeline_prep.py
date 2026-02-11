@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from services.llm_service import LlmService
     from services.ocr_service import OcrService
     from services.docx_output_service import DocxOutputService
+    from services.input_discovery_service import InputDiscoveryService
+    from services.document_input_service import DocumentInputService
 
 from nlp.llm.llm_types import ChatRequest, ChatResponse
 
@@ -22,4 +24,9 @@ class PrepPipeline():
     It loads text data in from word, pdf and image documents
     """
     app_root: str
-    docx_out: "DocxOutputService"
+    input_discovery_service: "InputDiscoveryService"
+    document_input_service: "DocumentInputService"
+    docx_out_service: "DocxOutputService"
+
+    # Return all the files
+    
