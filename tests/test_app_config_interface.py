@@ -35,6 +35,9 @@ class AppConfigInterfaceTests(unittest.TestCase):
         self.assertIn("docx_out_service", container)
         self.assertIn("ocr_server_proc", container)
         self.assertIn("ocr_service", container)
+        self.assertNotIn("ocr_client", container)
+        self.assertNotIn("ocr_model_path", container)
+        self.assertNotIn("ocr_mmproj_path", container)
         self.assertNotIn("loader", container)
         self.assertNotIn("pdf_loader", container)
 

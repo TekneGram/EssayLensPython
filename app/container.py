@@ -65,14 +65,6 @@ def build_container(app_cfg: AppConfig):
     # Determine the project root (used for resolving relative paths)
     project_root = Path(__file__).resolve().parents[1]
 
-    # ----- OCR config (kept independent from LLM config) -----
-    ocr_model_path = None
-    if app_cfg.ocr_config.ocr_gguf_path is not None:
-        ocr_model_path = Path(app_cfg.ocr_config.ocr_gguf_path).expanduser().resolve()
-    ocr_mmproj_path = None
-    if app_cfg.ocr_config.ocr_mmproj_path is not None:
-        ocr_mmproj_path = Path(app_cfg.ocr_config.ocr_mmproj_path).expanduser().resolve()
-
     # ----- Input layer -----
     docx_loader = DocxLoader(
         strip_whitespace=True,
@@ -186,10 +178,7 @@ def build_container(app_cfg: AppConfig):
         "document_input_service": document_input_service,
         "docx_out_service": docx_out_service,
         "ged": ged_service,
-        "ocr_model_path": ocr_model_path,
-        "ocr_mmproj_path": ocr_mmproj_path,
         "ocr_server_proc": ocr_server_proc,
-        "ocr_client": ocr_client,
         "ocr_service": ocr_service,
         "server_bin": server_bin,
         "server_proc": server_proc,

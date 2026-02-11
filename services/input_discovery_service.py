@@ -38,6 +38,7 @@ class InputDiscoveryService:
         {
             ".png",
             ".jpg",
+            ".JPG",
             ".jpeg",
             ".heic",
             ".heif",
