@@ -8,3 +8,4 @@ psutil
 python-docx
 httpx
 pypdf
+openai

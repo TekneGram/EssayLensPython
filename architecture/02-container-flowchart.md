@@ -9,31 +9,61 @@ graph TD
     subgraph Setup [Startup and Model Setup]
         CLI --> Settings[build_settings]
         CLI --> ModelSelect[select_model_and_update_config]
-        ModelSelect --> Persist[(.appdata/config/llm_model.json)]
-        ModelSelect --> Catalog[(config.llm_model_spec)]
+        CLI --> OcrSelect[select_ocr_model_and_update_config]
+        ModelSelect --> PersistLLM[(.appdata/config/llm_model.json)]
+        OcrSelect --> PersistOCR[(.appdata/config/ocr_model.json)]
+        ModelSelect --> LlmCatalog[(config.llm_model_spec)]
+        OcrSelect --> OcrCatalog[(config.ocr_model_spec)]
         CLI --> Bootstrap[bootstrap_llm]
         Bootstrap --> HF[Hugging Face Hub]
         Bootstrap --> Models[(.appdata/models)]
     end
 
     CLI --> Container[build_container]
-    Container --> ServerProc[LlmServerProcess.start]
-    Container --> LLMClient[OpenAICompatChatClient]
-    Container --> LLMService[LlmService]
 
-    CLI --> Pipeline[TestPipeline.run_test_again]
-    Pipeline --> Tasks[build_feedback_tasks<br/>nlp.llm.tasks.test_parallel_2]
-    Tasks --> DTOs[ChatRequest<br/>nlp.llm.llm_types]
-    DTOs --> LLMService
-    Pipeline --> Mode[with_mode no_think]
-    Mode --> LLMService
+    subgraph Container [Container Services]
+        Container --> LLMServer[LlmServerProcess]
+        Container --> OCRServer[OcrServerProcess]
+        Container --> LLMClient[OpenAICompatChatClient]
+        Container --> OCRClient[OcrClient]
+        Container --> LLMService[LlmService]
+        Container --> LLMTasks[LlmTaskService]
+        Container --> OCRService[OcrService]
+        Container --> Discovery[InputDiscoveryService]
+        Container --> InputSvc[DocumentInputService]
+        Container --> OutputSvc[DocxOutputService]
+        Container --> GedSvc[GedService]
+    end
+
+    subgraph Runtime [Main Runtime Pipelines]
+        CLI --> Prep[PrepPipeline]
+        CLI --> Metadata[MetadataPipeline]
+        CLI --> GED[GEDPipeline]
+        CLI --> TopicFB[FBPipeline]
+        CLI --> ConclFB[ConclusionPipeline]
+        CLI --> BodyFB[BodyPipeline]
+        CLI --> ContentFB[ContentPipeline]
+        CLI --> SummarizeFB[SummarizeFBPipeline]
+
+        Prep --> Checked[(..._checked.docx)]
+        Metadata --> Conc[(conc_para.docx)]
+        TopicFB --> TS[(ts.docx)]
+        TopicFB --> FB[(fb.docx)]
+        ConclFB --> FB
+        BodyFB --> FB
+        ContentFB --> Comp[(comp_para.docx)]
+        ContentFB --> FB
+        SummarizeFB --> Checked
+    end
+
+    LLMTasks --> LLMService
     LLMService --> LLMClient
     LLMClient --> Llama[llama-server /v1/chat/completions]
-    ServerProc --> Llama
+    LLMServer --> Llama
+    OCRServer --> Llama
     Llama --> Models
-    CLI --> Terminal[(type_print output loop)]
 
     class User actor;
-    class CLI,Settings,ModelSelect,Bootstrap,Container,Pipeline,Tasks,DTOs,LLMService,LLMClient,Mode,ServerProc internal;
+    class CLI,Settings,ModelSelect,OcrSelect,Bootstrap,Container,Prep,Metadata,GED,TopicFB,ConclFB,BodyFB,ContentFB,SummarizeFB,LLMServer,OCRServer,LLMClient,OCRClient,LLMService,LLMTasks,OCRService,Discovery,InputSvc,OutputSvc,GedSvc internal;
     class HF,Llama external;
-    class Persist,Catalog,Models,Terminal storage;
+    class PersistLLM,PersistOCR,LlmCatalog,OcrCatalog,Models,Checked,Conc,TS,FB,Comp storage;
