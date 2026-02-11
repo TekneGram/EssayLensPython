@@ -19,15 +19,13 @@ def main():
     type_print("Building settings", color=Color.BLUE)
     app_cfg = build_settings()
 
-    # Set up the OCR model
-    type_print("Selecting the OCR model", color=Color.BLUE)
-    app_cfg = select_ocr_model_and_update_config(app_cfg)
-
-    # Run all OCR things here
-
     # Set up the LLM
     type_print("Selecting the best model for your system", color=Color.BLUE)
     app_cfg = select_model_and_update_config(app_cfg)
+
+    # Set up the OCR model
+    type_print("Setting up the OCR model", color=Color.BLUE)
+    app_cfg = select_ocr_model_and_update_config(app_cfg)
 
     type_print("Bootstrapping a large language model", color=Color.BLUE)
     app_cfg = bootstrap_llm(app_cfg)
@@ -48,7 +46,7 @@ def main():
     deps = build_container(app_cfg)
 
     # Preparation stage (involves using OCR)
-    prep_pipeline = PrepPipeline(deps)
+    # prep_pipeline = PrepPipeline(deps)
 
     # Run all the LLM work next.
 

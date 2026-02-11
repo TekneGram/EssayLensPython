@@ -23,10 +23,15 @@ class AppConfigInterfaceTests(unittest.TestCase):
         ), patch(
             "app.container.DocxLoader",
             return_value=MagicMock(),
+        ), patch(
+            "app.container.PdfLoader",
+            return_value=MagicMock(),
         ):
             container = build_container(cfg)
         self.assertIn("project_root", container)
         self.assertIn("server_bin", container)
+        self.assertIn("document_input", container)
+        self.assertNotIn("loader", container)
 
 
 if __name__ == "__main__":

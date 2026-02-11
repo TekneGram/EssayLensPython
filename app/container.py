@@ -8,7 +8,9 @@ from inout.explainability_writer import ExplainabilityWriter
 from services.ged_service import GedService
 from nlp.ged.ged_bert import GedBertDetector
 from inout.docx_loader import DocxLoader
+from inout.pdf_loader import PdfLoader
 from services.docx_output_service import DocxOutputService
+from services.document_input_service import DocumentInputService
 from services.power_sampler import NullPowerSampler, PowermetricsPowerSampler
 from services.sustainability_service import Sustainability
 
@@ -68,9 +70,17 @@ def build_container(app_cfg: AppConfig):
         ocr_mmproj_path = Path(app_cfg.ocr_config.ocr_mmproj_path).expanduser().resolve()
 
     # ----- Input layer -----
-    loader = DocxLoader(
+    docx_loader = DocxLoader(
         strip_whitespace=True,
         keep_empty_paragraphs=False
+    )
+    pdf_loader = PdfLoader(
+        strip_whitespace=True,
+        keep_empty_pages=False,
+    )
+    document_input = DocumentInputService(
+        docx_loader=docx_loader,
+        pdf_loader=pdf_loader,
     )
 
     docx_out = DocxOutputService(
@@ -152,7 +162,8 @@ def build_container(app_cfg: AppConfig):
 
     return {
         "project_root": project_root,
-        "loader": loader,
+        "document_input": document_input,
+        "pdf_loader": pdf_loader,
         "docx_out": docx_out,
         "ged": ged_service,
         "ocr_model_path": ocr_model_path,

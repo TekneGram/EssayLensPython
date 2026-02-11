@@ -22,5 +22,4 @@ class PrepPipeline():
     It loads text data in from word, pdf and image documents
     """
     app_root: str
-    loader: DocxLoader
     docx_out: "DocxOutputService"

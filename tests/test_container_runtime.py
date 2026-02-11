@@ -86,7 +86,9 @@ class ContainerRuntimeTests(unittest.TestCase):
             cfg = _build_app_cfg(Path(tmpdir))
             fake_server_proc = MagicMock()
 
-            with patch("app.container.DocxLoader"), patch("app.container.DocxOutputService"), patch(
+            with patch("app.container.DocxLoader"), patch("app.container.PdfLoader"), patch(
+                "app.container.DocxOutputService"
+            ), patch(
                 "app.container.GedBertDetector"
             ), patch("app.container.GedService"), patch(
                 "app.container.LlmServerProcess", return_value=fake_server_proc
@@ -112,13 +114,17 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIn("llm_service", container)
             self.assertIsNotNone(container["llm_service"])
             self.assertIn("sustainability", container)
+            self.assertIn("document_input", container)
+            self.assertNotIn("loader", container)
 
     def test_build_container_skips_llm_wiring_when_backend_not_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             cfg = _build_app_cfg(Path(tmpdir))
             cfg = replace(cfg, llm_server=replace(cfg.llm_server, llama_backend="local"))
 
-            with patch("app.container.DocxLoader"), patch("app.container.DocxOutputService"), patch(
+            with patch("app.container.DocxLoader"), patch("app.container.PdfLoader"), patch(
+                "app.container.DocxOutputService"
+            ), patch(
                 "app.container.GedBertDetector"
             ), patch("app.container.GedService"), patch(
                 "app.container.LlmServerProcess"
@@ -139,6 +145,8 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIsNone(container["server_proc"])
             self.assertIsNone(container["llm_service"])
             self.assertIn("sustainability", container)
+            self.assertIn("document_input", container)
+            self.assertNotIn("loader", container)
 
 
 if __name__ == "__main__":
