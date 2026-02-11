@@ -30,8 +30,9 @@ class AppConfigInterfaceTests(unittest.TestCase):
             container = build_container(cfg)
         self.assertIn("project_root", container)
         self.assertIn("server_bin", container)
-        self.assertIn("input_discovery", container)
-        self.assertIn("document_input", container)
+        self.assertIn("input_discovery_service", container)
+        self.assertIn("document_input_service", container)
+        self.assertIn("docx_out_service", container)
         self.assertNotIn("loader", container)
         self.assertNotIn("pdf_loader", container)
 

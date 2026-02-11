@@ -114,8 +114,9 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIn("llm_service", container)
             self.assertIsNotNone(container["llm_service"])
             self.assertIn("sustainability", container)
-            self.assertIn("input_discovery", container)
-            self.assertIn("document_input", container)
+            self.assertIn("input_discovery_service", container)
+            self.assertIn("document_input_service", container)
+            self.assertIn("docx_out_service", container)
             self.assertNotIn("loader", container)
             self.assertNotIn("pdf_loader", container)
 
@@ -147,8 +148,9 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIsNone(container["server_proc"])
             self.assertIsNone(container["llm_service"])
             self.assertIn("sustainability", container)
-            self.assertIn("input_discovery", container)
-            self.assertIn("document_input", container)
+            self.assertIn("input_discovery_service", container)
+            self.assertIn("document_input_service", container)
+            self.assertIn("docx_out_service", container)
             self.assertNotIn("loader", container)
             self.assertNotIn("pdf_loader", container)
 

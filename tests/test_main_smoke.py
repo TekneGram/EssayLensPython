@@ -38,9 +38,7 @@ class MainSmokeTests(unittest.TestCase):
     def test_main_executes_expected_wiring_order(self) -> None:
         order: list[str] = []
         cfg = _fake_cfg()
-        fake_pipeline = Mock()
-        fake_pipeline.run_test_again.return_value = {"tasks": [], "outputs": []}
-        fake_llm = object()
+        fake_prep_pipeline = Mock()
 
         with patch("main.type_print"), patch("builtins.print"), patch(
             "main.build_settings", side_effect=lambda: order.append("build_settings") or cfg
@@ -55,18 +53,23 @@ class MainSmokeTests(unittest.TestCase):
             side_effect=lambda c: order.append("bootstrap") or c,
         ), patch(
             "main.build_container",
-            side_effect=lambda c: order.append("container") or {"llm_service": fake_llm},
+            side_effect=lambda c: order.append("container") or {
+                "project_root": "/tmp/project",
+                "input_discovery_service": object(),
+                "document_input_service": object(),
+                "docx_out_service": object(),
+            },
         ), patch(
-            "main.TestPipeline", return_value=fake_pipeline
-        ) as pipeline_cls:
+            "main.PrepPipeline", return_value=fake_prep_pipeline
+        ) as prep_pipeline_cls:
             main.main()
 
         self.assertEqual(
             order,
             ["build_settings", "select_model", "select_ocr", "bootstrap", "container"],
         )
-        pipeline_cls.assert_called_once_with(llm=fake_llm)
-        fake_pipeline.run_test_again.assert_called_once()
+        prep_pipeline_cls.assert_called_once()
+        fake_prep_pipeline.run_pipeline.assert_called_once()
 
 
 if __name__ == "__main__":

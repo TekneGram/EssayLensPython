@@ -33,7 +33,12 @@ class PrepPipeline():
         discovered_inputs: DiscoveredInputs = self._discover_inputs()
         
         # Process the paths with docx first
-        discovered_inputs.docx_paths
+        for triplet in discovered_inputs.docx_paths:
+            loaded = self.document_input_service.load(triplet.in_path)
+            self.docx_out_service.write_plain_copy(
+                output_path=triplet.out_path,
+                paragraphs=loaded.blocks,
+            )
 
         # Then process the paths with pdfs
         discovered_inputs.pdf_paths
@@ -43,7 +48,7 @@ class PrepPipeline():
         
 
     # Return all the files
-    def _discover_inputs(self) -> list[Path]:
+    def _discover_inputs(self) -> DiscoveredInputs:
         inputs = self.input_discovery_service.discover()
         return inputs
 
