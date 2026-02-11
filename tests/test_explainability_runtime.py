@@ -6,6 +6,7 @@ from pathlib import Path
 
 from config.ged_config import GedConfig
 from config.llm_config import LlmConfig
+from config.ocr_config import OcrConfig
 from config.run_config import RunConfig
 from services.explainability import ExplainabilityRecorder
 
@@ -21,7 +22,19 @@ class ExplainabilityRuntimeTests(unittest.TestCase):
             llama_model_alias="demo",
             llama_model_family="instruct",
         )
-        return ExplainabilityRecorder.new(run_cfg=run_cfg, ged_cfg=ged_cfg, llm_config=llm_cfg)
+        ocr_cfg = OcrConfig.from_strings(
+            ocr_server_model="ocr-demo",
+            ocr_model_key="ocr-demo",
+            ocr_model_display_name="OCR Demo",
+            ocr_model_alias="ocr-demo",
+            ocr_model_family="ocr/vision",
+        )
+        return ExplainabilityRecorder.new(
+            run_cfg=run_cfg,
+            ged_cfg=ged_cfg,
+            llm_config=llm_cfg,
+            ocr_config=ocr_cfg,
+        )
 
     def test_new_builds_utc_run_id(self) -> None:
         recorder = self._make_recorder()
@@ -33,10 +46,10 @@ class ExplainabilityRuntimeTests(unittest.TestCase):
         lines = recorder.finish_doc()
 
         self.assertIn("Explainability Report: essay.docx", lines)
+        self.assertTrue(any("OCR MODEL: OCR Demo" in line for line in lines))
         self.assertTrue(any("GED_MODEL: ged-demo" in line for line in lines))
         self.assertTrue(any("GED_BATCH_SIZE: 8" in line for line in lines))
-        self.assertTrue(any("LLAMA_MODEL: Demo" in line for line in lines))
-        self.assertTrue(any("INCLUDE_EDITED_TEXT_SECTION: True" in line for line in lines))
+        self.assertTrue(any("LLM MODEL: Demo" in line for line in lines))
 
     def test_log_and_log_kv(self) -> None:
         recorder = self._make_recorder()

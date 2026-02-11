@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from pathlib import Path
 from app.runtime_lifecycle import RuntimeLifecycle
+from utils.terminal_ui import type_print, Color
 
 if TYPE_CHECKING:
     from services.llm_service import LlmService
@@ -38,6 +39,7 @@ class PrepPipeline():
         discovered_inputs: DiscoveredInputs = self._discover_inputs()
         
         # Process the paths with docx first
+        type_print("Loading docx files.", color=Color.GREEN)
         for triplet in discovered_inputs.docx_paths:
             loaded = self.document_input_service.load(triplet.in_path)
             self.docx_out_service.write_plain_copy(
@@ -46,6 +48,7 @@ class PrepPipeline():
             )
 
         # Then process the paths with pdfs
+        type_print("Loading pdf files.", color=Color.GREEN)
         for triplet in discovered_inputs.pdf_paths:
             loaded = self.document_input_service.load(triplet.in_path)
             self.docx_out_service.write_plain_copy(
@@ -55,6 +58,7 @@ class PrepPipeline():
 
         # Then process the paths with images
         if discovered_inputs.image_paths:
+            type_print("Extracting text from image files.", color=Color.GREEN)
             if self.ocr_server_proc is None or self.ocr_service is None:
                 return
             self.runtime_lifecycle.register_process(self.ocr_server_proc)

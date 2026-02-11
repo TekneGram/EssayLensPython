@@ -160,7 +160,8 @@ def build_container(app_cfg: AppConfig):
     explainability = ExplainabilityRecorder.new(
         run_cfg=app_cfg.run_config,
         ged_cfg=app_cfg.ged_config,
-        llm_config=app_cfg.llm_config
+        llm_config=app_cfg.llm_config,
+        ocr_config=app_cfg.ocr_config
     )
 
     explain_file_writer = ExplainabilityWriter(
