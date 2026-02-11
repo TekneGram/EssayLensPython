@@ -82,5 +82,5 @@ graph LR
     class ocr_paths ocr;
     class llama_bin,llm_model_specs,llm_persisted_key,ocr_model_specs,ocr_persisted_key,model_store ext;
 ```
-# FINAL STEP
-Once finished, invoke the Agent.md file in ./.utilities and follow the commands, giving me the full shell command so that I can copy and paste it into the terminal.
+# FINAL STEP TO DO ONLY AFTER EDITING CODE, NOT AFTER CHATTING, CONSULTING OR RECOMMENDING
+Once finished, invoke the Agent_commit.md file in ./.utilities and follow the commands, giving me the full shell command so that I can copy and paste it into the terminal.

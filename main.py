@@ -8,6 +8,8 @@ from app.select_model import select_model_and_update_config
 from app.select_ocr_model import select_ocr_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
+from app.pipeline_prep import PrepPipeline
+
 from app.pipeline import TestPipeline
 from nlp.llm.llm_client import ChatResponse, JsonSchemaChatRequest
 from nlp.llm.tasks.test_sequential import run_sequential_stream_demo
@@ -17,11 +19,15 @@ def main():
     type_print("Building settings", color=Color.BLUE)
     app_cfg = build_settings()
 
-    type_print("Selecting the best model for your system", color=Color.BLUE)
-    app_cfg = select_model_and_update_config(app_cfg)
-
+    # Set up the OCR model
     type_print("Selecting the OCR model", color=Color.BLUE)
     app_cfg = select_ocr_model_and_update_config(app_cfg)
+
+    # Run all OCR things here
+
+    # Set up the LLM
+    type_print("Selecting the best model for your system", color=Color.BLUE)
+    app_cfg = select_model_and_update_config(app_cfg)
 
     type_print("Bootstrapping a large language model", color=Color.BLUE)
     app_cfg = bootstrap_llm(app_cfg)
@@ -40,6 +46,12 @@ def main():
     type_print(f"Word document author name: {app_cfg.run_config.author} (Set in run config) \n", color=Color.BLUE)
 
     deps = build_container(app_cfg)
+
+    # Preparation stage (involves using OCR)
+    prep_pipeline = PrepPipeline(deps)
+
+    # Run all the LLM work next.
+
     llm_service = deps.get("llm_service")
     if llm_service is None:
         raise RuntimeError("llm_service is not available. Ensure llama backend is set to server.")
