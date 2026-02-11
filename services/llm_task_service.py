@@ -7,6 +7,8 @@ from utils.terminal_ui import type_print, Color
 
 from nlp.llm.tasks.extract_metadata import run_parallel_metadata_extraction
 from nlp.llm.tasks.grammar_error_correction import run_parallel_grammar_correction
+from nlp.llm.tasks.topic_sentence_analyzer import run_parallel_topic_sentence_analysis
+from nlp.llm.tasks.topic_sentence_constructor import run_parallel_topic_sentence_request
 
 if TYPE_CHECKING:
     from interfaces.config.app_config import AppConfigShape
@@ -50,6 +52,40 @@ class LlmTaskService:
         llm_no_think = self.llm_service.with_mode("no_think")
         return asyncio.run(
             run_parallel_grammar_correction(
+                llm_service=llm_no_think,
+                app_cfg=app_cfg,
+                text_tasks=text_tasks,
+                max_concurrency=max_concurrency,
+            )
+        )
+
+    def construct_topic_sentence_parallel(
+        self,
+        *,
+        app_cfg: "AppConfigShape",
+        text_tasks: Sequence[str],
+        max_concurrency: int | None = None,
+    ) -> dict[str, Any]:
+        llm_no_think = self.llm_service.with_mode("no_think")
+        return asyncio.run(
+            run_parallel_topic_sentence_request(
+                llm_service=llm_no_think,
+                app_cfg=app_cfg,
+                text_tasks=text_tasks,
+                max_concurrency=max_concurrency,
+            )
+        )
+
+    def analyze_topic_sentence_parallel(
+        self,
+        *,
+        app_cfg: "AppConfigShape",
+        text_tasks: Sequence[str],
+        max_concurrency: int | None = None,
+    ) -> dict[str, Any]:
+        llm_no_think = self.llm_service.with_mode("no_think")
+        return asyncio.run(
+            run_parallel_topic_sentence_analysis(
                 llm_service=llm_no_think,
                 app_cfg=app_cfg,
                 text_tasks=text_tasks,

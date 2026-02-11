@@ -41,6 +41,7 @@ class MainSmokeTests(unittest.TestCase):
         fake_prep_pipeline = Mock()
         fake_prep_pipeline.run_pipeline.return_value = object()
         fake_metadata_pipeline = Mock()
+        fake_fb_pipeline = Mock()
         fake_ged_pipeline = Mock()
         fake_lifecycle = object()
         fake_ocr_server_proc = object()
@@ -81,6 +82,8 @@ class MainSmokeTests(unittest.TestCase):
         ) as prep_pipeline_cls, patch(
             "main.MetadataPipeline", return_value=fake_metadata_pipeline
         ) as metadata_pipeline_cls, patch(
+            "main.FBPipeline", return_value=fake_fb_pipeline
+        ) as fb_pipeline_cls, patch(
             "main.GEDPipeline", return_value=fake_ged_pipeline
         ) as ged_pipeline_cls:
             main.main()
@@ -110,6 +113,15 @@ class MainSmokeTests(unittest.TestCase):
             llm_task_service=fake_llm_task_service,
             runtime_lifecycle=fake_lifecycle,
         )
+        fb_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
         ged_pipeline_cls.assert_called_once_with(
             app_cfg=cfg,
             discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
@@ -122,6 +134,7 @@ class MainSmokeTests(unittest.TestCase):
             runtime_lifecycle=fake_lifecycle,
         )
         fake_metadata_pipeline.run_pipeline.assert_called_once()
+        fake_fb_pipeline.run_pipeline.assert_called_once()
         fake_ged_pipeline.run_pipeline.assert_called_once()
 
 

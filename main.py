@@ -10,6 +10,7 @@ from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
 from app.pipeline_prep import PrepPipeline
 from app.pipeline_metadata import MetadataPipeline
+from app.pipeline_fb import FBPipeline
 from app.pipeline_ged import GEDPipeline
 from app.runtime_lifecycle import RuntimeLifecycle
 
@@ -71,16 +72,16 @@ def main():
     if llm_task_service is None:
         raise RuntimeError("llm_task_service is not available. Ensure llama backend is set to server.")
 
-    # metadata_pipeline = MetadataPipeline(
-    #     app_cfg=app_cfg,
-    #     discovered_inputs=discovered_inputs,
-    #     document_input_service=deps["document_input_service"],
-    #     docx_out_service=deps["docx_out_service"],
-    #     llm_server_proc=deps.get("server_proc"),
-    #     llm_task_service=llm_task_service,
-    #     runtime_lifecycle=runtime_lifecycle,
-    # )
-    # metadata_pipeline.run_pipeline()
+    metadata_pipeline = MetadataPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_server_proc=deps.get("server_proc"),
+        llm_task_service=llm_task_service,
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    metadata_pipeline.run_pipeline()
 
     ged_pipeline = GEDPipeline(
         app_cfg=app_cfg,
@@ -95,7 +96,18 @@ def main():
     )
     ged_pipeline.run_pipeline()
 
-    
+    fb_pipeline = FBPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_task_service=llm_task_service,
+        llm_server_proc=deps.get("server_proc"),
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    fb_pipeline.run_pipeline()
+
+
 
     # Run all the LLM work next.
 

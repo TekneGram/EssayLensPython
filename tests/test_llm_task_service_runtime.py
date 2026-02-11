@@ -58,6 +58,48 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["failure_count"], 0)
         self.assertEqual(result["max_concurrency"], 3)
 
+    def test_construct_topic_sentence_parallel_uses_no_think(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+
+        llm_no_think = Mock()
+        llm_no_think.chat_many = AsyncMock(return_value=[Mock(content="Good topic sentence.")])
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.construct_topic_sentence_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["Supporting details without the original topic sentence."],
+            max_concurrency=2,
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
+        self.assertEqual(result["max_concurrency"], 2)
+
+    def test_analyze_topic_sentence_parallel_uses_no_think(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+
+        llm_no_think = Mock()
+        llm_no_think.chat_many = AsyncMock(return_value=[Mock(content="The learner topic sentence is too general.")])
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.analyze_topic_sentence_parallel(
+            app_cfg=app_cfg,
+            text_tasks=['{"learner_text":"x","learner_topic_sentence":"y","good_topic_sentence":"z"}'],
+            max_concurrency=2,
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
+        self.assertEqual(result["max_concurrency"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
