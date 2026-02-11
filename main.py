@@ -52,17 +52,18 @@ def main():
         deps["document_input_service"],
         deps["docx_out_service"]
     )
+    prep_pipeline.run_pipeline()
 
     # Run all the LLM work next.
 
-    llm_service = deps.get("llm_service")
-    if llm_service is None:
-        raise RuntimeError("llm_service is not available. Ensure llama backend is set to server.")
+    # llm_service = deps.get("llm_service")
+    # if llm_service is None:
+    #     raise RuntimeError("llm_service is not available. Ensure llama backend is set to server.")
 
-    type_print("Running parallel KV-cache test", color=Color.BLUE)
-    pipeline = TestPipeline(llm=llm_service)
-    result = pipeline.run_test_again(app_cfg)
-    print(result)
+    # type_print("Running parallel KV-cache test", color=Color.BLUE)
+    # pipeline = TestPipeline(llm=llm_service)
+    # result = pipeline.run_test_again(app_cfg)
+    # print(result)
 
     # type_print(
     #     f"Parallel test complete: tasks={result['task_count']}, "
@@ -70,17 +71,19 @@ def main():
     #     f"chars/s={result['chars_per_second']:.2f}\n",
     #     color=Color.BLUE,
     # )
-    for idx, output in enumerate(result["outputs"], start=1):
-        if isinstance(output, Exception):
-            type_print(f"[Task {idx}] ERROR: {output}\n")
-            continue
-        if isinstance(output, ChatResponse):
-            type_print(f"[Task {idx}] {output.content}\n")
-            type_print(f"[Task {idx}] {output.reasoning_content}")
-            type_print(f"[Task {idx}] {output.finish_reason}")
-            type_print(f"[Task {idx}] {output.usage}")
-            continue
-        type_print(f"[Task {idx}] {output}\n")
+
+
+    # for idx, output in enumerate(result["outputs"], start=1):
+    #     if isinstance(output, Exception):
+    #         type_print(f"[Task {idx}] ERROR: {output}\n")
+    #         continue
+    #     if isinstance(output, ChatResponse):
+    #         type_print(f"[Task {idx}] {output.content}\n")
+    #         type_print(f"[Task {idx}] {output.reasoning_content}")
+    #         type_print(f"[Task {idx}] {output.finish_reason}")
+    #         type_print(f"[Task {idx}] {output.usage}")
+    #         continue
+    #     type_print(f"[Task {idx}] {output}\n")
 
     # type_print("Running live streaming demo", color=Color.BLUE)
     # llm_stream = llm_service.with_mode("no_think")

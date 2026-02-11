@@ -85,6 +85,8 @@ def build_container(app_cfg: AppConfig):
     )
     input_discovery_service = InputDiscoveryService(
         input_root=app_cfg.assessment_paths.input_folder,
+        output_root=app_cfg.assessment_paths.output_folder,
+        explainability_root=app_cfg.assessment_paths.explained_folder
     )
 
     docx_out_service = DocxOutputService(
