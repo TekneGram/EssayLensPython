@@ -14,15 +14,16 @@ SYSTEM_PROMPT = (
     "You are a friendly teacher who wants to support your student.\n"
     "There is too much feedback for the student.\n"
     "Take the main points of the feedback and summarize as follows:\n"
-    "Focus on something done well.\n"
-    "If something needs improving, explain it briefly here.\n"
+    "Focus on some things done well.\n"
+    "If the feedback suggests that something needs improving, explain it briefly here.\n"
     "End with other aspects that were done well.\n"
     "Ensure the feedback is logically organized and concise.\n"
+    "Be concise but with good coverage of points.\n"
+    "Do not use bullet points of * asterisks or - dashes.\n"
     "Do not refer to 'the learner'. Speak directly to your student.\n"
 )
 
-
-def summarize_personalize(text_tasks: Sequence[str]) -> list[ChatRequest]:
+def build_summarize_personalize(text_tasks: Sequence[str]) -> list[ChatRequest]:
     return [
         ChatRequest(
             system=SYSTEM_PROMPT,
@@ -33,13 +34,13 @@ def summarize_personalize(text_tasks: Sequence[str]) -> list[ChatRequest]:
     ]
 
 
-async def run_parallel_hedging_analysis(
+async def run_parallel_summarize_personalize(
     llm_service: "LlmService",
     app_cfg: "AppConfigShape",
     text_tasks: Sequence[str],
     max_concurrency: int | None = None,
 ) -> dict[str, Any]:
-    requests_ = summarize_personalize(text_tasks)
+    requests_ = build_summarize_personalize(text_tasks)
     concurrency = max_concurrency or app_cfg.llm_server.llama_n_parallel
 
     started = time.perf_counter()

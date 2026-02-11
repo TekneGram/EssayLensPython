@@ -15,8 +15,8 @@ SYSTEM_PROMPT = (
     "It involves words like more than, less than, greater, and any comparative or superlative adjectives.\n"
     "It also involves connecting words like However, In contrast, Although, and while.\n"
     "The writer should use some in their writing because it helps to make their writing deeper.\n"
-    "Comment on the quality of their compare and contrast language.\n"
-    "If they haven't used it, encourage them to use more and give an example.\n"
+    "Comment on the quality of their compare and contrast language. Keep your comments brief.\n"
+    "If they haven't used it, encourage them to use more and give *one* example sentence, *not* a whole paragraph.\n"
 )
 
 

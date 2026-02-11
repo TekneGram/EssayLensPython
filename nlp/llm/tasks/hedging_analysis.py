@@ -15,9 +15,8 @@ SYSTEM_PROMPT = (
     "It involves words like probably, could be, maybe, perhaps and it could be said that.\n"
     "It also involves words like definitely, certainly, there is no doubt that, should and must\n"
     "The writer should use some in their writing because it helps to give nuance to their writing.\n"
-    "Comment on the quality of their hedging.\n"
-    "If there is too much hedging, encourage them to reduce it and give an example.\n"
-    "If there is not enough, encourage them to use more and give an example.\n"
+    "Comment on the quality of their hedging. Be concise\n"
+    "If there is no hedging language, encourage them to use more and give *one* example sentence.\n"
 )
 
 

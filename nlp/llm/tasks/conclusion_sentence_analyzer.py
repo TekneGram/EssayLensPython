@@ -15,7 +15,7 @@ SYSTEM_PROMPT = (
     "Basics: It should summarize the main idea of the paragraph.\n"
     "Extras: It can reiterate some key points from the paragraph.\n"
     "Extras: It can also evaluate, predict the future or make a call to action.\n"
-    "Comment on the learner's achievement of the basics and the extras.\n"
+    "Comment on the learner's achievement of the basics (main idea) and the extras (key points, evaluation, prediction, call to action).\n"
     "Write concisely.\n"
     "Output only plain text.\n"
 )

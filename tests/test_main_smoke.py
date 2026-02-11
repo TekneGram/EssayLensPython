@@ -44,6 +44,15 @@ class MainSmokeTests(unittest.TestCase):
         fake_fb_pipeline = Mock()
         fake_conclusion_pipeline = Mock()
         fake_body_pipeline = Mock()
+        fake_content_pipeline = Mock()
+        fake_summarize_fb_pipeline = Mock()
+        fake_summarize_fb_pipeline.run_pipeline.return_value = {
+            "document_count": 0,
+            "task_count": 0,
+            "success_count": 0,
+            "failure_count": 0,
+            "items": [],
+        }
         fake_ged_pipeline = Mock()
         fake_lifecycle = object()
         fake_ocr_server_proc = object()
@@ -90,6 +99,10 @@ class MainSmokeTests(unittest.TestCase):
         ) as conclusion_pipeline_cls, patch(
             "main.BodyPipeline", return_value=fake_body_pipeline
         ) as body_pipeline_cls, patch(
+            "main.ContentPipeline", return_value=fake_content_pipeline
+        ) as content_pipeline_cls, patch(
+            "main.SummarizeFBPipeline", return_value=fake_summarize_fb_pipeline
+        ) as summarize_fb_pipeline_cls, patch(
             "main.GEDPipeline", return_value=fake_ged_pipeline
         ) as ged_pipeline_cls:
             main.main()
@@ -146,6 +159,24 @@ class MainSmokeTests(unittest.TestCase):
             llm_server_proc=unittest.mock.ANY,
             runtime_lifecycle=fake_lifecycle,
         )
+        content_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
+        summarize_fb_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
         ged_pipeline_cls.assert_called_once_with(
             app_cfg=cfg,
             discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
@@ -161,6 +192,8 @@ class MainSmokeTests(unittest.TestCase):
         fake_fb_pipeline.run_pipeline.assert_called_once()
         fake_conclusion_pipeline.run_pipeline.assert_called_once()
         fake_body_pipeline.run_pipeline.assert_called_once()
+        fake_content_pipeline.run_pipeline.assert_called_once()
+        fake_summarize_fb_pipeline.run_pipeline.assert_called_once()
         fake_ged_pipeline.run_pipeline.assert_called_once()
 
 

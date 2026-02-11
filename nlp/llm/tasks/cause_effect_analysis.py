@@ -15,8 +15,8 @@ SYSTEM_PROMPT = (
     "It involves words like because, due to, as a result, thanks to, because of, and therefore.\n"
     "It also involves connecting words like causes, has an effect on, and leads to\n"
     "The writer should use some in their writing because it helps to make their writing more analytical.\n"
-    "Comment on the quality of their cause and effect language.\n"
-    "If they haven't used it, encourage them to use more and give an example.\n"
+    "Comment on the quality of their cause and effect language. Keep your comments brief.\n"
+    "If they haven't used it, encourage them to use more and give *one* example sentence, *not* a whole paragraph.\n"
 )
 
 

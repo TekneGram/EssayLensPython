@@ -184,6 +184,69 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["failure_count"], 0)
         self.assertEqual(result["max_concurrency"], 2)
 
+    def test_analyze_content_parallel_uses_no_think(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+
+        llm_no_think = Mock()
+        llm_no_think.chat_many = AsyncMock(return_value=[Mock(content="Content analysis feedback.")])
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.analyze_content_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["Paragraph content for content analysis."],
+            max_concurrency=2,
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
+        self.assertEqual(result["max_concurrency"], 2)
+
+    def test_filter_content_parallel_uses_no_think(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+
+        llm_no_think = Mock()
+        llm_no_think.chat_many = AsyncMock(return_value=[Mock(content="Filtered content feedback.")])
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.filter_content_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["Comparison feedback to filter."],
+            max_concurrency=2,
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
+        self.assertEqual(result["max_concurrency"], 2)
+
+    def test_summarize_personalize_parallel_uses_no_think(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+
+        llm_no_think = Mock()
+        llm_no_think.chat_many = AsyncMock(return_value=[Mock(content="Final summary feedback.")])
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.summarize_personalize_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["Long feedback text to summarize and personalize."],
+            max_concurrency=2,
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
+        self.assertEqual(result["max_concurrency"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,8 @@ from app.pipeline_metadata import MetadataPipeline
 from app.pipeline_fb import FBPipeline
 from app.pipeline_conclusion import ConclusionPipeline
 from app.pipeline_body import BodyPipeline
+from app.pipeline_content import ContentPipeline
+from app.pipeline_summarize_fb import SummarizeFBPipeline
 from app.pipeline_ged import GEDPipeline
 from app.runtime_lifecycle import RuntimeLifecycle
 
@@ -129,6 +131,45 @@ def main():
         runtime_lifecycle=runtime_lifecycle,
     )
     body_pipeline.run_pipeline()
+
+    content_pipeline = ContentPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_task_service=llm_task_service,
+        llm_server_proc=deps.get("server_proc"),
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    content_pipeline.run_pipeline()
+
+    summarize_fb_pipeline = SummarizeFBPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_task_service=llm_task_service,
+        llm_server_proc=deps.get("server_proc"),
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    summarize_result = summarize_fb_pipeline.run_pipeline()
+    type_print(
+        (
+            "[Main] SummarizeFB complete: "
+            f"docs={summarize_result.get('document_count', 0)}, "
+            f"tasks={summarize_result.get('task_count', 0)}, "
+            f"llm_success={summarize_result.get('success_count', 0)}, "
+            f"llm_failure={summarize_result.get('failure_count', 0)}"
+        ),
+        color=Color.BLUE,
+    )
+    for item in summarize_result.get("items", []):
+        errors = item.get("errors", [])
+        if not errors:
+            continue
+        doc_name = str(item.get("out_path", "unknown"))
+        for err in errors:
+            type_print(f"[Main] SummarizeFB note for {doc_name}: {err}", color=Color.YELLOW)
 
 
 
