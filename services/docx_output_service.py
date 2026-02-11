@@ -71,3 +71,14 @@ class DocxOutputService():
             doc.add_paragraph(p or "")
         doc.save(str(output_path))
         return output_path
+
+    def append_paragraphs(self, *, output_path: Path, paragraphs: List[str]) -> Path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.exists():
+            doc = Document(str(output_path))
+        else:
+            doc = Document()
+        for p in paragraphs:
+            doc.add_paragraph(p or "")
+        doc.save(str(output_path))
+        return output_path

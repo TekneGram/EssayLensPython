@@ -66,7 +66,7 @@ class PrepPipeline():
         if discovered_inputs.image_paths:
             type_print("Extracting text from image files.", color=Color.GREEN)
             if self.ocr_server_proc is None or self.ocr_service is None:
-                return
+                return discovered_inputs
             self.runtime_lifecycle.register_process(self.ocr_server_proc)
             self.ocr_server_proc.start()
             try:
