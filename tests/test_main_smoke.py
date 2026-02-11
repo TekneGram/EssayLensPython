@@ -39,6 +39,9 @@ class MainSmokeTests(unittest.TestCase):
         order: list[str] = []
         cfg = _fake_cfg()
         fake_prep_pipeline = Mock()
+        fake_lifecycle = object()
+        fake_ocr_server_proc = object()
+        fake_ocr_service = object()
 
         with patch("main.type_print"), patch("builtins.print"), patch(
             "main.build_settings", side_effect=lambda: order.append("build_settings") or cfg
@@ -58,7 +61,11 @@ class MainSmokeTests(unittest.TestCase):
                 "input_discovery_service": object(),
                 "document_input_service": object(),
                 "docx_out_service": object(),
+                "ocr_server_proc": fake_ocr_server_proc,
+                "ocr_service": fake_ocr_service,
             },
+        ), patch(
+            "main.RuntimeLifecycle", return_value=fake_lifecycle
         ), patch(
             "main.PrepPipeline", return_value=fake_prep_pipeline
         ) as prep_pipeline_cls:
@@ -68,7 +75,15 @@ class MainSmokeTests(unittest.TestCase):
             order,
             ["build_settings", "select_model", "select_ocr", "bootstrap", "container"],
         )
-        prep_pipeline_cls.assert_called_once()
+        prep_pipeline_cls.assert_called_once_with(
+            "/tmp/project",
+            unittest.mock.ANY,
+            unittest.mock.ANY,
+            unittest.mock.ANY,
+            fake_ocr_server_proc,
+            fake_ocr_service,
+            fake_lifecycle,
+        )
         fake_prep_pipeline.run_pipeline.assert_called_once()
 
 

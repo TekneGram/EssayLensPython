@@ -9,6 +9,7 @@ from app.select_ocr_model import select_ocr_model_and_update_config
 from app.bootstrap_llm import bootstrap_llm
 from app.container import build_container
 from app.pipeline_prep import PrepPipeline
+from app.runtime_lifecycle import RuntimeLifecycle
 
 from app.pipeline import TestPipeline
 from nlp.llm.llm_client import ChatResponse, JsonSchemaChatRequest
@@ -44,13 +45,18 @@ def main():
     type_print(f"Word document author name: {app_cfg.run_config.author} (Set in run config) \n", color=Color.BLUE)
 
     deps = build_container(app_cfg)
+    # Start the runtime lifecycle manager
+    runtime_lifecycle = RuntimeLifecycle()
 
     # Preparation stage (involves using OCR)
     prep_pipeline = PrepPipeline(
         deps["project_root"],
         deps["input_discovery_service"],
         deps["document_input_service"],
-        deps["docx_out_service"]
+        deps["docx_out_service"],
+        deps.get("ocr_server_proc"),
+        deps.get("ocr_service"),
+        runtime_lifecycle,
     )
     prep_pipeline.run_pipeline()
 
