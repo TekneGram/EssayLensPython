@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 from app.pipeline_metadata import MetadataPipeline
 from services.input_discovery_service import DiscoveredInputs, DiscoveredPathTriplet
@@ -36,9 +36,9 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
             Mock(blocks=["name: student B", "essay body B"]),
         ]
 
-        llm_no_think = Mock()
-        llm_no_think.json_schema_chat_many = AsyncMock(
-            return_value=[
+        llm_task_service = Mock()
+        llm_task_service.extract_metadata_parallel.return_value = {
+            "outputs": [
                 {
                     "student_name": "A",
                     "student_number": "",
@@ -47,10 +47,11 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
                     "extraneous": "",
                 },
                 RuntimeError("parse failed"),
-            ]
-        )
-        llm_service = Mock()
-        llm_service.with_mode.return_value = llm_no_think
+            ],
+            "success_count": 1,
+            "failure_count": 1,
+            "elapsed_s": 0.01,
+        }
         docx_out_service = Mock()
 
         pipeline = MetadataPipeline(
@@ -58,12 +59,12 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
             discovered_inputs=discovered_inputs,
             document_input_service=document_input_service,
             docx_out_service=docx_out_service,
-            llm_service=llm_service,
+            llm_task_service=llm_task_service,
         )
 
         result = pipeline.run_pipeline()
 
-        llm_service.with_mode.assert_called_once_with("no_think")
+        llm_task_service.extract_metadata_parallel.assert_called_once()
         document_input_service.load.assert_any_call(triplet_a.out_path)
         document_input_service.load.assert_any_call(triplet_b.out_path)
         self.assertEqual(result["task_count"], 2)
@@ -107,10 +108,10 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
         document_input_service = Mock()
         document_input_service.load.side_effect = [Mock(blocks=[f"essay {i}"]) for i in range(5)]
 
-        llm_no_think = Mock()
-        llm_no_think.json_schema_chat_many = AsyncMock(
-            side_effect=[
-                [
+        llm_task_service = Mock()
+        llm_task_service.extract_metadata_parallel.side_effect = [
+            {
+                "outputs": [
                     {
                         "student_name": "A",
                         "student_number": "",
@@ -126,7 +127,12 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
                         "extraneous": "",
                     },
                 ],
-                [
+                "success_count": 2,
+                "failure_count": 0,
+                "elapsed_s": 0.01,
+            },
+            {
+                "outputs": [
                     {
                         "student_name": "C",
                         "student_number": "",
@@ -136,7 +142,12 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
                     },
                     RuntimeError("fail-d"),
                 ],
-                [
+                "success_count": 1,
+                "failure_count": 1,
+                "elapsed_s": 0.01,
+            },
+            {
+                "outputs": [
                     {
                         "student_name": "E",
                         "student_number": "",
@@ -145,10 +156,11 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
                         "extraneous": "",
                     }
                 ],
-            ]
-        )
-        llm_service = Mock()
-        llm_service.with_mode.return_value = llm_no_think
+                "success_count": 1,
+                "failure_count": 0,
+                "elapsed_s": 0.01,
+            },
+        ]
         docx_out_service = Mock()
 
         pipeline = MetadataPipeline(
@@ -156,18 +168,18 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
             discovered_inputs=discovered_inputs,
             document_input_service=document_input_service,
             docx_out_service=docx_out_service,
-            llm_service=llm_service,
+            llm_task_service=llm_task_service,
         )
 
         result = pipeline.run_pipeline()
 
-        self.assertEqual(llm_no_think.json_schema_chat_many.await_count, 3)
-        first_batch = llm_no_think.json_schema_chat_many.await_args_list[0].args[0]
-        second_batch = llm_no_think.json_schema_chat_many.await_args_list[1].args[0]
-        third_batch = llm_no_think.json_schema_chat_many.await_args_list[2].args[0]
-        self.assertEqual(len(first_batch), 2)
-        self.assertEqual(len(second_batch), 2)
-        self.assertEqual(len(third_batch), 1)
+        self.assertEqual(llm_task_service.extract_metadata_parallel.call_count, 3)
+        first_texts = llm_task_service.extract_metadata_parallel.call_args_list[0].kwargs["text_tasks"]
+        second_texts = llm_task_service.extract_metadata_parallel.call_args_list[1].kwargs["text_tasks"]
+        third_texts = llm_task_service.extract_metadata_parallel.call_args_list[2].kwargs["text_tasks"]
+        self.assertEqual(len(first_texts), 2)
+        self.assertEqual(len(second_texts), 2)
+        self.assertEqual(len(third_texts), 1)
 
         self.assertEqual(result["batch_size"], 2)
         self.assertEqual(result["task_count"], 5)
@@ -196,9 +208,9 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
         document_input_service = Mock()
         document_input_service.load.return_value = Mock(blocks=["raw input"])
 
-        llm_no_think = Mock()
-        llm_no_think.json_schema_chat_many = AsyncMock(
-            return_value=[
+        llm_task_service = Mock()
+        llm_task_service.extract_metadata_parallel.return_value = {
+            "outputs": [
                 {
                     "student_name": "A",
                     "student_number": "123",
@@ -206,10 +218,11 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
                     "essay": "Line one.\n\nLine two.\n   Line three.",
                     "extraneous": "",
                 }
-            ]
-        )
-        llm_service = Mock()
-        llm_service.with_mode.return_value = llm_no_think
+            ],
+            "success_count": 1,
+            "failure_count": 0,
+            "elapsed_s": 0.01,
+        }
         docx_out_service = Mock()
 
         pipeline = MetadataPipeline(
@@ -217,7 +230,7 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
             discovered_inputs=discovered_inputs,
             document_input_service=document_input_service,
             docx_out_service=docx_out_service,
-            llm_service=llm_service,
+            llm_task_service=llm_task_service,
         )
 
         pipeline.run_pipeline()
@@ -261,59 +274,67 @@ class MetadataPipelineRuntimeTests(unittest.TestCase):
         batch_calls = {"count": 0}
         docx_out_service = Mock()
 
-        async def _json_many_side_effect(*args, **kwargs):
+        def _task_side_effect(*args, **kwargs):
             _ = (args, kwargs)
             batch_calls["count"] += 1
             if batch_calls["count"] == 1:
-                return [
-                    {
-                        "student_name": "A",
-                        "student_number": "",
-                        "essay_title": "",
-                        "essay": "essay 0",
-                        "extraneous": "",
-                    },
-                    {
-                        "student_name": "B",
-                        "student_number": "",
-                        "essay_title": "",
-                        "essay": "essay 1",
-                        "extraneous": "",
-                    },
-                ]
+                return {
+                    "outputs": [
+                        {
+                            "student_name": "A",
+                            "student_number": "",
+                            "essay_title": "",
+                            "essay": "essay 0",
+                            "extraneous": "",
+                        },
+                        {
+                            "student_name": "B",
+                            "student_number": "",
+                            "essay_title": "",
+                            "essay": "essay 1",
+                            "extraneous": "",
+                        },
+                    ],
+                    "success_count": 2,
+                    "failure_count": 0,
+                    "elapsed_s": 0.01,
+                }
             self.assertEqual(
                 docx_out_service.append_paragraphs.call_count,
                 2,
                 "Second batch started before first batch writes were flushed.",
             )
-            return [
-                {
-                    "student_name": "C",
-                    "student_number": "",
-                    "essay_title": "",
-                    "essay": "essay 2",
-                    "extraneous": "",
-                },
-                {
-                    "student_name": "D",
-                    "student_number": "",
-                    "essay_title": "",
-                    "essay": "essay 3",
-                    "extraneous": "",
-                },
-            ]
+            return {
+                "outputs": [
+                    {
+                        "student_name": "C",
+                        "student_number": "",
+                        "essay_title": "",
+                        "essay": "essay 2",
+                        "extraneous": "",
+                    },
+                    {
+                        "student_name": "D",
+                        "student_number": "",
+                        "essay_title": "",
+                        "essay": "essay 3",
+                        "extraneous": "",
+                    },
+                ],
+                "success_count": 2,
+                "failure_count": 0,
+                "elapsed_s": 0.01,
+            }
 
-        llm_no_think = Mock()
-        llm_no_think.json_schema_chat_many = AsyncMock(side_effect=_json_many_side_effect)
-        llm_service = Mock()
-        llm_service.with_mode.return_value = llm_no_think
+        llm_task_service = Mock()
+        llm_task_service.extract_metadata_parallel.side_effect = _task_side_effect
 
         pipeline = MetadataPipeline(
             app_cfg=app_cfg,
             discovered_inputs=discovered_inputs,
             document_input_service=document_input_service,
             docx_out_service=docx_out_service,
-            llm_service=llm_service,
+            llm_task_service=llm_task_service,
         )
 
         result = pipeline.run_pipeline()

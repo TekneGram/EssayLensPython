@@ -100,6 +100,8 @@ class ContainerRuntimeTests(unittest.TestCase):
             ) as client_cls, patch(
                 "app.container.LlmService"
             ) as service_cls, patch(
+                "app.container.LlmTaskService"
+            ) as task_service_cls, patch(
                 "app.container.ExplainabilityRecorder.new"
             ) as explain_new, patch(
                 "app.container.ExplainabilityWriter"
@@ -110,9 +112,12 @@ class ContainerRuntimeTests(unittest.TestCase):
             fake_server_proc.start.assert_not_called()
             client_cls.assert_called_once()
             service_cls.assert_called_once()
+            task_service_cls.assert_called_once()
             explain_new.assert_called_once()
             self.assertIn("llm_service", container)
             self.assertIsNotNone(container["llm_service"])
+            self.assertIn("llm_task_service", container)
+            self.assertIsNotNone(container["llm_task_service"])
             self.assertIn("ocr_server_proc", container)
             self.assertIsNotNone(container["ocr_server_proc"])
             self.assertIn("ocr_service", container)
@@ -143,6 +148,8 @@ class ContainerRuntimeTests(unittest.TestCase):
             ) as client_cls, patch(
                 "app.container.LlmService"
             ) as service_cls, patch(
+                "app.container.LlmTaskService"
+            ) as task_service_cls, patch(
                 "app.container.ExplainabilityRecorder.new"
             ), patch(
                 "app.container.ExplainabilityWriter"
@@ -152,8 +159,10 @@ class ContainerRuntimeTests(unittest.TestCase):
             server_cls.assert_not_called()
             client_cls.assert_not_called()
             service_cls.assert_not_called()
+            task_service_cls.assert_not_called()
             self.assertIsNone(container["server_proc"])
             self.assertIsNone(container["llm_service"])
+            self.assertIsNone(container["llm_task_service"])
             self.assertIsNone(container["ocr_server_proc"])
             self.assertIsNone(container["ocr_service"])
             self.assertNotIn("ocr_client", container)

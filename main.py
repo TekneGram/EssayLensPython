@@ -66,9 +66,9 @@ def main():
 
     # ----- METADATA EXTRACTION STAGE -----
     # Run the metadata extraction
-    llm_service = deps.get("llm_service")
-    if llm_service is None:
-        raise RuntimeError("llm_service is not available. Ensure llama backend is set to server.")
+    llm_task_service = deps.get("llm_task_service")
+    if llm_task_service is None:
+        raise RuntimeError("llm_task_service is not available. Ensure llama backend is set to server.")
 
     metadata_pipeline = MetadataPipeline(
         app_cfg=app_cfg,
@@ -76,7 +76,7 @@ def main():
         document_input_service=deps["document_input_service"],
         docx_out_service=deps["docx_out_service"],
         llm_server_proc=deps.get("server_proc"),
-        llm_service=llm_service,
+        llm_task_service=llm_task_service,
         runtime_lifecycle=runtime_lifecycle,
     )
     metadata_pipeline.run_pipeline()

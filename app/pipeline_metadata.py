@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from utils.terminal_ui import type_print, Color
 
 from app.runtime_lifecycle import RuntimeLifecycle
-from nlp.llm.tasks.extract_metadata import run_parallel_metadata_extraction
 
 if TYPE_CHECKING:
     from interfaces.config.app_config import AppConfigShape
@@ -14,7 +12,7 @@ if TYPE_CHECKING:
     from services.document_input_service import DocumentInputService
     from services.docx_output_service import DocxOutputService
     from services.input_discovery_service import DiscoveredInputs, DiscoveredPathTriplet
-    from services.llm_service import LlmService
+    from services.llm_task_service import LlmTaskService
 
 
 @dataclass
@@ -30,7 +28,7 @@ class MetadataPipeline:
     discovered_inputs: "DiscoveredInputs"
     document_input_service: "DocumentInputService"
     docx_out_service: "DocxOutputService"
-    llm_service: "LlmService"
+    llm_task_service: "LlmTaskService"
     llm_server_proc: "LlmServerProcess | None" = None
     runtime_lifecycle: RuntimeLifecycle = field(default_factory=RuntimeLifecycle)
 
@@ -46,10 +44,9 @@ class MetadataPipeline:
             }
 
         batch_size = self._batch_size()
-        type_print("Establishing server in no_think mode - this will need updating later for instruct only llms", color=Color.YELLOW)
-        llm_no_think = self.llm_service.with_mode("no_think")
         items: list[dict[str, Any]] = []
 
+        
         def _run_all_batches() -> dict[str, Any]:
             outputs: list[dict[str, Any] | Exception] = []
             success_count = 0
@@ -59,19 +56,16 @@ class MetadataPipeline:
             for idx in range(0, len(triplets), batch_size):
                 batch_triplets = triplets[idx : idx + batch_size]
                 text_tasks = [self._load_prepared_text(t) for t in batch_triplets]
-                type_print("Extracting metadata on a batch...", color=Color.BLUE)
-                batch_result = asyncio.run(
-                    run_parallel_metadata_extraction(
-                        llm_service=llm_no_think,
-                        app_cfg=self.app_cfg,
-                        text_tasks=text_tasks,
-                    )
+                type_print("Extracting metadata through LLM...", color=Color.BLUE)
+                batch_result = self.llm_task_service.extract_metadata_parallel(
+                    app_cfg=self.app_cfg,
+                    text_tasks=text_tasks,
                 )
                 outputs.extend(batch_result["outputs"])
                 success_count += batch_result["success_count"]
                 failure_count += batch_result["failure_count"]
                 elapsed_s += batch_result["elapsed_s"]
-                type_print("Writing metadata outputs...", color=Color.BLUE)
+                type_print("Writing to file...", color=Color.BLUE)
                 self._persist_batch_outputs(
                     batch_triplets=batch_triplets,
                     batch_outputs=batch_result["outputs"],
