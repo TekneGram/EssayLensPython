@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 from utils.terminal_ui import type_print, Color
 
 from nlp.llm.tasks.extract_metadata import run_parallel_metadata_extraction
+from nlp.llm.tasks.grammar_error_correction import run_parallel_grammar_correction
 
 if TYPE_CHECKING:
     from interfaces.config.app_config import AppConfigShape
@@ -36,5 +37,22 @@ class LlmTaskService:
                 llm_service=llm_no_think,
                 app_cfg=app_cfg,
                 text_tasks=text_tasks,
+            )
+        )
+
+    def correct_grammar_parallel(
+        self,
+        *,
+        app_cfg: "AppConfigShape",
+        text_tasks: Sequence[str],
+        max_concurrency: int | None = None,
+    ) -> dict[str, Any]:
+        llm_no_think = self.llm_service.with_mode("no_think")
+        return asyncio.run(
+            run_parallel_grammar_correction(
+                llm_service=llm_no_think,
+                app_cfg=app_cfg,
+                text_tasks=text_tasks,
+                max_concurrency=max_concurrency,
             )
         )

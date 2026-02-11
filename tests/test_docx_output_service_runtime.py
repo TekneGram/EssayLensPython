@@ -73,6 +73,22 @@ class DocxOutputServiceRuntimeTests(unittest.TestCase):
             doc = Document(str(out_path))
             self.assertEqual([p.text for p in doc.paragraphs], ["first", "", "second"])
 
+    def test_append_corrected_paragraph_writes_no_change_message_when_identical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = Path(tmpdir) / "nested" / "copied.docx"
+            svc = DocxOutputService(author="Alice")
+            svc.write_plain_copy(output_path=out_path, paragraphs=["original"])
+
+            appended = svc.append_corrected_paragraph(
+                output_path=out_path,
+                original_paragraph="Same sentence.",
+                corrected_paragraph="Same sentence.",
+            )
+
+            self.assertEqual(appended, out_path)
+            doc = Document(str(out_path))
+            self.assertEqual([p.text for p in doc.paragraphs][-2:], ["Corrected Paragraph", "No grammar corrections necessary"])
+
 
 if __name__ == "__main__":
     unittest.main()

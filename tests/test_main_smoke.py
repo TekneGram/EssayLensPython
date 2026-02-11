@@ -41,6 +41,7 @@ class MainSmokeTests(unittest.TestCase):
         fake_prep_pipeline = Mock()
         fake_prep_pipeline.run_pipeline.return_value = object()
         fake_metadata_pipeline = Mock()
+        fake_ged_pipeline = Mock()
         fake_lifecycle = object()
         fake_ocr_server_proc = object()
         fake_ocr_service = object()
@@ -70,6 +71,8 @@ class MainSmokeTests(unittest.TestCase):
                 "server_proc": object(),
                 "llm_service": fake_llm_service,
                 "llm_task_service": fake_llm_task_service,
+                "ged": object(),
+                "explain": None,
             },
         ), patch(
             "main.RuntimeLifecycle", return_value=fake_lifecycle
@@ -77,7 +80,9 @@ class MainSmokeTests(unittest.TestCase):
             "main.PrepPipeline", return_value=fake_prep_pipeline
         ) as prep_pipeline_cls, patch(
             "main.MetadataPipeline", return_value=fake_metadata_pipeline
-        ) as metadata_pipeline_cls:
+        ) as metadata_pipeline_cls, patch(
+            "main.GEDPipeline", return_value=fake_ged_pipeline
+        ) as ged_pipeline_cls:
             main.main()
 
         self.assertEqual(
@@ -105,7 +110,19 @@ class MainSmokeTests(unittest.TestCase):
             llm_task_service=fake_llm_task_service,
             runtime_lifecycle=fake_lifecycle,
         )
+        ged_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            ged_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            explainability=None,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
         fake_metadata_pipeline.run_pipeline.assert_called_once()
+        fake_ged_pipeline.run_pipeline.assert_called_once()
 
 
 if __name__ == "__main__":

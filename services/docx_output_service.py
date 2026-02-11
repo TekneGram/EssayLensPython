@@ -82,3 +82,32 @@ class DocxOutputService():
             doc.add_paragraph(p or "")
         doc.save(str(output_path))
         return output_path
+
+    def append_corrected_paragraph(
+        self,
+        *,
+        output_path: Path,
+        original_paragraph: str,
+        corrected_paragraph: str,
+        heading: str = "Corrected Paragraph",
+        no_change_message: str = "No grammar corrections necessary",
+    ) -> Path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.exists():
+            doc = Document(str(output_path))
+        else:
+            doc = Document()
+
+        self._editor.enable_track_revisions(doc)
+        doc.add_paragraph(heading)
+
+        original = (original_paragraph or "").strip()
+        corrected = (corrected_paragraph or "").strip()
+        if original == corrected:
+            doc.add_paragraph(no_change_message)
+        else:
+            diff_paragraph = doc.add_paragraph()
+            self._editor.apply_sentence_aligned_diff(diff_paragraph, original, corrected)
+
+        doc.save(str(output_path))
+        return output_path
