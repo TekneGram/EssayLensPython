@@ -116,6 +116,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIn("sustainability", container)
             self.assertIn("document_input", container)
             self.assertNotIn("loader", container)
+            self.assertNotIn("pdf_loader", container)
 
     def test_build_container_skips_llm_wiring_when_backend_not_server(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -147,6 +148,7 @@ class ContainerRuntimeTests(unittest.TestCase):
             self.assertIn("sustainability", container)
             self.assertIn("document_input", container)
             self.assertNotIn("loader", container)
+            self.assertNotIn("pdf_loader", container)
 
 
 if __name__ == "__main__":

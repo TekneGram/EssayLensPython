@@ -163,7 +163,6 @@ def build_container(app_cfg: AppConfig):
     return {
         "project_root": project_root,
         "document_input": document_input,
-        "pdf_loader": pdf_loader,
         "docx_out": docx_out,
         "ged": ged_service,
         "ocr_model_path": ocr_model_path,

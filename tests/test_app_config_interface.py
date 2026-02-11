@@ -32,6 +32,7 @@ class AppConfigInterfaceTests(unittest.TestCase):
         self.assertIn("server_bin", container)
         self.assertIn("document_input", container)
         self.assertNotIn("loader", container)
+        self.assertNotIn("pdf_loader", container)
 
 
 if __name__ == "__main__":
