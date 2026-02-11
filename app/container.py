@@ -76,8 +76,8 @@ def build_container(app_cfg: AppConfig):
         keep_empty_paragraphs=False
     )
     pdf_loader = PdfLoader(
-        strip_whitespace=True,
-        keep_empty_pages=False,
+        strip_whitespace=False,
+        keep_empty_pages=True,
     )
     document_input_service = DocumentInputService(
         docx_loader=docx_loader,
