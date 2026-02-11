@@ -33,6 +33,8 @@ class AppConfigInterfaceTests(unittest.TestCase):
         self.assertIn("input_discovery_service", container)
         self.assertIn("document_input_service", container)
         self.assertIn("docx_out_service", container)
+        self.assertIn("ocr_server_proc", container)
+        self.assertIn("ocr_service", container)
         self.assertNotIn("loader", container)
         self.assertNotIn("pdf_loader", container)
 

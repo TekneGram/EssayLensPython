@@ -81,10 +81,11 @@ def _build_app_cfg(root: Path) -> AppConfig:
 
 
 class ContainerRuntimeTests(unittest.TestCase):
-    def test_build_container_starts_server_and_registers_shutdown(self) -> None:
+    def test_build_container_wires_server_without_starting_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             cfg = _build_app_cfg(Path(tmpdir))
             fake_server_proc = MagicMock()
+            fake_ocr_server_proc = MagicMock()
 
             with patch("app.container.DocxLoader"), patch("app.container.PdfLoader"), patch(
                 "app.container.DocxOutputService"
@@ -92,6 +93,8 @@ class ContainerRuntimeTests(unittest.TestCase):
                 "app.container.GedBertDetector"
             ), patch("app.container.GedService"), patch(
                 "app.container.LlmServerProcess", return_value=fake_server_proc
+            ), patch(
+                "app.container.OcrServerProcess", return_value=fake_ocr_server_proc
             ) as server_cls, patch(
                 "app.container.OpenAICompatChatClient"
             ) as client_cls, patch(
@@ -100,19 +103,20 @@ class ContainerRuntimeTests(unittest.TestCase):
                 "app.container.ExplainabilityRecorder.new"
             ) as explain_new, patch(
                 "app.container.ExplainabilityWriter"
-            ), patch(
-                "app.container.atexit.register"
-            ) as register_mock:
+            ):
                 container = build_container(cfg)
 
             server_cls.assert_called_once()
-            fake_server_proc.start.assert_called_once()
-            register_mock.assert_called_once_with(fake_server_proc.stop)
+            fake_server_proc.start.assert_not_called()
             client_cls.assert_called_once()
             service_cls.assert_called_once()
             explain_new.assert_called_once()
             self.assertIn("llm_service", container)
             self.assertIsNotNone(container["llm_service"])
+            self.assertIn("ocr_server_proc", container)
+            self.assertIsNotNone(container["ocr_server_proc"])
+            self.assertIn("ocr_service", container)
+            self.assertIsNotNone(container["ocr_service"])
             self.assertIn("sustainability", container)
             self.assertIn("input_discovery_service", container)
             self.assertIn("document_input_service", container)
@@ -147,6 +151,8 @@ class ContainerRuntimeTests(unittest.TestCase):
             service_cls.assert_not_called()
             self.assertIsNone(container["server_proc"])
             self.assertIsNone(container["llm_service"])
+            self.assertIsNone(container["ocr_server_proc"])
+            self.assertIsNone(container["ocr_service"])
             self.assertIn("sustainability", container)
             self.assertIn("input_discovery_service", container)
             self.assertIn("document_input_service", container)

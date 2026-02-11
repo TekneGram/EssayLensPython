@@ -2,7 +2,10 @@
 import shutil
 from nlp.llm.llm_server_process import LlmServerProcess
 from nlp.llm.llm_client import OpenAICompatChatClient
+from nlp.ocr.ocr_server_process import OcrServerProcess
+from nlp.ocr.ocr_client import OcrClient
 from services.llm_service import LlmService
+from services.ocr_service import OcrService
 from services.explainability import ExplainabilityRecorder
 from inout.explainability_writer import ExplainabilityWriter
 from services.ged_service import GedService
@@ -14,11 +17,11 @@ from services.document_input_service import DocumentInputService
 from services.input_discovery_service import InputDiscoveryService
 from services.power_sampler import NullPowerSampler, PowermetricsPowerSampler
 from services.sustainability_service import Sustainability
+from config.ocr_request_config import OcrRequestConfig
 
 
 # Standard utilities
 from pathlib import Path
-import atexit
 from app.settings import AppConfig
 
 def _resolve_path(p: str | Path, project_root: Path) -> Path:
@@ -99,6 +102,23 @@ def build_container(app_cfg: AppConfig):
     ged_service = GedService(detector=ged_detector)
     
 
+    # ----- OCR Wiring (server mode) -----
+    ocr_server_proc: OcrServerProcess | None = None
+    ocr_client: OcrClient | None = None
+    ocr_service: OcrService | None = None
+    if app_cfg.llm_server.llama_backend == "server":
+        ocr_server_proc = OcrServerProcess(
+            server_cfg=app_cfg.llm_server,
+            ocr_cfg=app_cfg.ocr_config,
+        )
+        ocr_request_cfg = OcrRequestConfig.from_values()
+        ocr_client = OcrClient(
+            server_url=app_cfg.llm_server.llama_server_url,
+            model_name=app_cfg.ocr_config.ocr_model_alias,
+            request_cfg=ocr_request_cfg,
+        )
+        ocr_service = OcrService(client=ocr_client)
+
     # ----- LLM Wiring (server mode) -----
     server_proc = None
     server_bin: Path | None = None
@@ -131,12 +151,6 @@ def build_container(app_cfg: AppConfig):
             server_cfg=app_cfg.llm_server,
             llm_cfg=app_cfg.llm_config,
         )
-
-        # Start the llm server
-        server_proc.start()
-
-        # Ensure the server is stopped cleanly on program exit
-        atexit.register(server_proc.stop)
 
         # ----- LLM Client -----
         client = OpenAICompatChatClient(
@@ -174,6 +188,9 @@ def build_container(app_cfg: AppConfig):
         "ged": ged_service,
         "ocr_model_path": ocr_model_path,
         "ocr_mmproj_path": ocr_mmproj_path,
+        "ocr_server_proc": ocr_server_proc,
+        "ocr_client": ocr_client,
+        "ocr_service": ocr_service,
         "server_bin": server_bin,
         "server_proc": server_proc,
         "llm_client": client,

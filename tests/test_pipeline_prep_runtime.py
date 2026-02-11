@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
@@ -108,6 +109,52 @@ class PrepPipelineRuntimeTests(unittest.TestCase):
                 "This sentence is wrapped across two visual lines. Another sentence starts and continues.",
             ],
         )
+
+    def test_run_pipeline_starts_and_stops_ocr_for_image_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            image_path = Path(tmpdir) / "scan.png"
+            image_path.write_bytes(b"image-bytes")
+
+            image_triplet = DiscoveredPathTriplet(
+                in_path=image_path,
+                out_path=Path(tmpdir) / "out" / "scan_checked.docx",
+                explained_path=Path(tmpdir) / "explained" / "scan_explained.txt",
+            )
+
+            discovery = Mock()
+            discovery.discover.return_value = DiscoveredInputs(
+                docx_paths=[],
+                pdf_paths=[],
+                image_paths=[image_triplet],
+                unsupported_paths=[],
+            )
+
+            ocr_server_proc = Mock()
+            ocr_service = Mock()
+            ocr_service.extract_text.return_value = "line one\nline two"
+            docx_out = Mock()
+            lifecycle = Mock()
+
+            pipeline = PrepPipeline(
+                app_root=tmpdir,
+                input_discovery_service=discovery,
+                document_input_service=Mock(),
+                docx_out_service=docx_out,
+                ocr_server_proc=ocr_server_proc,
+                ocr_service=ocr_service,
+                runtime_lifecycle=lifecycle,
+            )
+
+            pipeline.run_pipeline()
+
+            lifecycle.register_process.assert_called_once_with(ocr_server_proc)
+            ocr_server_proc.start.assert_called_once_with()
+            ocr_service.extract_text.assert_called_once_with(image_bytes=b"image-bytes")
+            docx_out.write_plain_copy.assert_called_once_with(
+                output_path=image_triplet.out_path,
+                paragraphs=["line one", "line two"],
+            )
+            ocr_server_proc.stop.assert_called_once_with()
 
 
 if __name__ == "__main__":

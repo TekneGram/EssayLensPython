@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from pathlib import Path
+from app.runtime_lifecycle import RuntimeLifecycle
 
 if TYPE_CHECKING:
     from services.llm_service import LlmService
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from services.docx_output_service import DocxOutputService
     from services.input_discovery_service import InputDiscoveryService, DiscoveredInputs
     from services.document_input_service import DocumentInputService
+    from nlp.ocr.ocr_server_process import OcrServerProcess
 
 from nlp.llm.llm_types import ChatRequest, ChatResponse
 
@@ -28,6 +30,9 @@ class PrepPipeline():
     input_discovery_service: "InputDiscoveryService"
     document_input_service: "DocumentInputService"
     docx_out_service: "DocxOutputService"
+    ocr_server_proc: "OcrServerProcess | None" = None
+    ocr_service: "OcrService | None" = None
+    runtime_lifecycle: RuntimeLifecycle = field(default_factory=RuntimeLifecycle)
 
     def run_pipeline(self):
         discovered_inputs: DiscoveredInputs = self._discover_inputs()
@@ -49,7 +54,21 @@ class PrepPipeline():
             )
 
         # Then process the paths with images
-        discovered_inputs.image_paths
+        if discovered_inputs.image_paths:
+            if self.ocr_server_proc is None or self.ocr_service is None:
+                return
+            self.runtime_lifecycle.register_process(self.ocr_server_proc)
+            self.ocr_server_proc.start()
+            try:
+                for triplet in discovered_inputs.image_paths:
+                    image_bytes = triplet.in_path.read_bytes()
+                    extracted_text = self.ocr_service.extract_text(image_bytes=image_bytes)
+                    self.docx_out_service.write_plain_copy(
+                        output_path=triplet.out_path,
+                        paragraphs=self._normalize_ocr_text(extracted_text),
+                    )
+            finally:
+                self.ocr_server_proc.stop()
         
 
     # Return all the files
@@ -109,5 +128,13 @@ class PrepPipeline():
         if len(line) > 140:
             return False
         return not line.endswith((".", "!", "?", ";", ":"))
+
+    @staticmethod
+    def _normalize_ocr_text(text: str) -> list[str]:
+        lines = [line.rstrip() for line in text.splitlines()]
+        if not lines:
+            return [""]
+        normalized = [line for line in lines if line.strip()]
+        return normalized or [""]
 
     
