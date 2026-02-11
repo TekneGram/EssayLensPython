@@ -1,70 +1,85 @@
 from __future__ import annotations
-import time
-from typing import TYPE_CHECKING, Any
 
-from nlp.llm.llm_client import ChatRequest, ChatResponse
+import time
+from typing import TYPE_CHECKING, Any, Sequence
+
+from nlp.llm.llm_types import JsonSchemaChatRequest
 
 if TYPE_CHECKING:
     from interfaces.config.app_config import AppConfigShape
     from services.llm_service import LlmService
 
-system = (
-        "Extract the student_name, student_number, essay_title, essay and extraneous.\n"
-        "Also extract anything that looks like word count data and extraneous part of writing like references or messages to the teacher.\n"
-        "Do not edit any content you receive.\n"
-        "Return ONLY valid JSON with double-quoted keys and string values.\n"
-        "No extra text, no markdown, no trailing commas.\n"
-        "Example:\n"
-        "{"
-        "\"student_name\":\"Daniel Parsons\","
-        "\"student_number\":\"St29879.dfij9\","
-        "\"essay_title\":\"Having Part Time Jobs\","
-        "\"essay\":\"I disagree with...\","
-        "If there is no student_name leave the property blank.\n"
-        "If there is no student_number leave the property blank.\n"
-        "If there is no essay_title leave the property blank.\n"
-        "Example:\n"
-        "{"
-        "\"student_name\":\"\","
-        "\"student_number\":\"\","
-        "\"essay_title\":\"\","
-        "\"essay\":\"I disagree with...\""
-        "}\n"
-    )
 
-async def run_parallel_test(
-        llm_service: "LlmService",
-        app_cfg: "AppConfigShape"
+SYSTEM_PROMPT = (
+    "Extract the student_name, student_number, essay_title, and essay from the text.\n"
+    "Return ONLY JSON that follows the requested schema.\n"
+    "Do not rewrite or correct content.\n"
+    "If a field is missing, return an empty string.\n"
+    "The extraneous field should include references, salutations, "
+    "word-count notes, and content not part of the essay body."
+)
+
+METADATA_RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "essay_metadata",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "student_name": {"type": "string"},
+                "student_number": {"type": "string"},
+                "essay_title": {"type": "string"},
+                "essay": {"type": "string"},
+                "extraneous": {"type": "string"},
+            },
+            "required": [
+                "student_name",
+                "student_number",
+                "essay_title",
+                "essay",
+                "extraneous",
+            ],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+def build_metadata_requests(text_tasks: Sequence[str]) -> list[JsonSchemaChatRequest]:
+    return [
+        JsonSchemaChatRequest(
+            system=SYSTEM_PROMPT,
+            user=text,
+            schema=METADATA_RESPONSE_SCHEMA,
+            temperature=0.0,
+        )
+        for text in text_tasks
+    ]
+
+
+async def run_parallel_metadata_extraction(
+    llm_service: "LlmService",
+    app_cfg: "AppConfigShape",
+    text_tasks: Sequence[str],
 ) -> dict[str, Any]:
-    requests_ = [ChatRequest(system=SYSTEM_PROMPT, user=task) for task in TASKS]
+    requests_ = build_metadata_requests(text_tasks)
 
     started = time.perf_counter()
-    outputs = await llm_service.chat_many(
+    outputs = await llm_service.json_schema_chat_many(
         requests_,
         max_concurrency=app_cfg.llm_server.llama_n_parallel,
     )
-    for i, res in enumerate(outputs):
-        if isinstance(res, Exception):
-            print(f"Task {i} failed with: {res}")
     elapsed_s = time.perf_counter() - started
 
-    # Separate successes from failure
-    successful_responses = [res for res in outputs if isinstance(res, ChatResponse)]
-    failed_tasks = [res for res in outputs if isinstance(res, Exception)]
-
-    total_chars = sum(len(res.content or "") for res in successful_responses)
-    chars_per_second = total_chars / elapsed_s if elapsed_s > 0 else 0.0
+    success_count = len([res for res in outputs if not isinstance(res, Exception)])
+    failure_count = len([res for res in outputs if isinstance(res, Exception)])
 
     return {
-        "mode": "parallel",
-        "task_count": len(TASKS),
-        "success_count": len(successful_responses),
-        "failure_count": len(failed_tasks),
+        "mode": "parallel_json_schema",
+        "task_count": len(requests_),
+        "success_count": success_count,
+        "failure_count": failure_count,
         "max_concurrency": app_cfg.llm_server.llama_n_parallel,
         "elapsed_s": elapsed_s,
-        "total_output_chars": total_chars,
-        "chars_per_second": chars_per_second,
-        "system_prompt_shared": True,
-        "tasks": TASKS,
-        "outputs": outputs,
+        "outputs": outputs,  # list[dict[str, Any] | Exception]
     }

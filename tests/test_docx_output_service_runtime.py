@@ -61,6 +61,18 @@ class DocxOutputServiceRuntimeTests(unittest.TestCase):
             doc = Document(str(out_path))
             self.assertEqual([p.text for p in doc.paragraphs], paragraphs)
 
+    def test_append_paragraphs_appends_to_existing_doc(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = Path(tmpdir) / "nested" / "copied.docx"
+            svc = DocxOutputService(author="Alice")
+            svc.write_plain_copy(output_path=out_path, paragraphs=["first"])
+
+            appended = svc.append_paragraphs(output_path=out_path, paragraphs=["", "second"])
+
+            self.assertEqual(appended, out_path)
+            doc = Document(str(out_path))
+            self.assertEqual([p.text for p in doc.paragraphs], ["first", "", "second"])
+
 
 if __name__ == "__main__":
     unittest.main()

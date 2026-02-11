@@ -5,6 +5,7 @@ from nlp.llm.llm_client import OpenAICompatChatClient
 from nlp.ocr.ocr_server_process import OcrServerProcess
 from nlp.ocr.ocr_client import OcrClient
 from services.llm_service import LlmService
+from services.llm_task_service import LlmTaskService
 from services.ocr_service import OcrService
 from services.explainability import ExplainabilityRecorder
 from inout.explainability_writer import ExplainabilityWriter
@@ -116,6 +117,7 @@ def build_container(app_cfg: AppConfig):
     server_bin: Path | None = None
     client: OpenAICompatChatClient | None = None
     llm_service: LlmService | None = None
+    llm_task_service: LlmTaskService | None = None
     if app_cfg.llm_server.llama_backend == "server":
 
         # Resolve llm-server binary path
@@ -155,6 +157,7 @@ def build_container(app_cfg: AppConfig):
             client=client,
             max_parallel=app_cfg.llm_server.llama_n_parallel,
         )
+        llm_task_service = LlmTaskService(llm_service=llm_service)
 
     # ----- Explainability Recorder -----
     explainability = ExplainabilityRecorder.new(
@@ -185,6 +188,7 @@ def build_container(app_cfg: AppConfig):
         "server_proc": server_proc,
         "llm_client": client,
         "llm_service": llm_service,
+        "llm_task_service": llm_task_service,
         "explain": explainability,
         "explain_file_writer": explain_file_writer,
         "sustainability": sustainability,

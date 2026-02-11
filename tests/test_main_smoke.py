@@ -39,9 +39,13 @@ class MainSmokeTests(unittest.TestCase):
         order: list[str] = []
         cfg = _fake_cfg()
         fake_prep_pipeline = Mock()
+        fake_prep_pipeline.run_pipeline.return_value = object()
+        fake_metadata_pipeline = Mock()
         fake_lifecycle = object()
         fake_ocr_server_proc = object()
         fake_ocr_service = object()
+        fake_llm_service = object()
+        fake_llm_task_service = object()
 
         with patch("main.type_print"), patch("builtins.print"), patch(
             "main.build_settings", side_effect=lambda: order.append("build_settings") or cfg
@@ -63,12 +67,17 @@ class MainSmokeTests(unittest.TestCase):
                 "docx_out_service": object(),
                 "ocr_server_proc": fake_ocr_server_proc,
                 "ocr_service": fake_ocr_service,
+                "server_proc": object(),
+                "llm_service": fake_llm_service,
+                "llm_task_service": fake_llm_task_service,
             },
         ), patch(
             "main.RuntimeLifecycle", return_value=fake_lifecycle
         ), patch(
             "main.PrepPipeline", return_value=fake_prep_pipeline
-        ) as prep_pipeline_cls:
+        ) as prep_pipeline_cls, patch(
+            "main.MetadataPipeline", return_value=fake_metadata_pipeline
+        ) as metadata_pipeline_cls:
             main.main()
 
         self.assertEqual(
@@ -87,6 +96,16 @@ class MainSmokeTests(unittest.TestCase):
             runtime_lifecycle=fake_lifecycle,
         )
         fake_prep_pipeline.run_pipeline.assert_called_once()
+        metadata_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_server_proc=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            runtime_lifecycle=fake_lifecycle,
+        )
+        fake_metadata_pipeline.run_pipeline.assert_called_once()
 
 
 if __name__ == "__main__":
