@@ -19,6 +19,17 @@ class ExplainabilityWriterTests(unittest.TestCase):
             self.assertTrue(out_path.exists())
             self.assertEqual(out_path.read_text(encoding="utf-8"), "line1\nline2\n")
 
+    def test_write_to_path_writes_at_explicit_explained_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            writer = ExplainabilityWriter(output_dir=Path(tmpdir) / "unused")
+            explained_path = Path(tmpdir) / "nested" / "essay_explained.txt"
+
+            out_path = writer.write_to_path(explained_path, ["line1", "line2"])
+
+            self.assertEqual(out_path, explained_path)
+            self.assertTrue(explained_path.exists())
+            self.assertEqual(explained_path.read_text(encoding="utf-8"), "line1\nline2\n")
+
 
 if __name__ == "__main__":
     unittest.main()

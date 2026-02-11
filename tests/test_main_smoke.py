@@ -76,13 +76,15 @@ class MainSmokeTests(unittest.TestCase):
             ["build_settings", "select_model", "select_ocr", "bootstrap", "container"],
         )
         prep_pipeline_cls.assert_called_once_with(
-            "/tmp/project",
-            unittest.mock.ANY,
-            unittest.mock.ANY,
-            unittest.mock.ANY,
-            fake_ocr_server_proc,
-            fake_ocr_service,
-            fake_lifecycle,
+            app_root="/tmp/project",
+            input_discovery_service=unittest.mock.ANY,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            explainability=None,
+            explain_file_writer=None,
+            ocr_server_proc=fake_ocr_server_proc,
+            ocr_service=fake_ocr_service,
+            runtime_lifecycle=fake_lifecycle,
         )
         fake_prep_pipeline.run_pipeline.assert_called_once()
 

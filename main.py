@@ -48,17 +48,27 @@ def main():
     # Start the runtime lifecycle manager
     runtime_lifecycle = RuntimeLifecycle()
 
+    # ----- PREPARATION STAGE -----
     # Preparation stage (involves using OCR)
+    # Prepare the texts and return the file paths where they are located
     prep_pipeline = PrepPipeline(
-        deps["project_root"],
-        deps["input_discovery_service"],
-        deps["document_input_service"],
-        deps["docx_out_service"],
-        deps.get("ocr_server_proc"),
-        deps.get("ocr_service"),
-        runtime_lifecycle,
+        app_root=str(deps["project_root"]),
+        input_discovery_service=deps["input_discovery_service"],
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        explainability=deps.get("explain"),
+        explain_file_writer=deps.get("explain_file_writer"),
+        ocr_server_proc=deps.get("ocr_server_proc"),
+        ocr_service=deps.get("ocr_service"),
+        runtime_lifecycle=runtime_lifecycle,
     )
-    prep_pipeline.run_pipeline()
+    discovered_inputs = prep_pipeline.run_pipeline()
+
+    # ----- METADATA EXTRACTION STAGE -----
+    # Run the metadata extraction
+    metadata_pipeline = MetadataPipeline(
+        
+    )
 
     # Run all the LLM work next.
 

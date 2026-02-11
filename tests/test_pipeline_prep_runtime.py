@@ -6,10 +6,76 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from app.pipeline_prep import PrepPipeline
+from config.ged_config import GedConfig
+from config.llm_config import LlmConfig
+from config.ocr_config import OcrConfig
+from config.run_config import RunConfig
+from inout.explainability_writer import ExplainabilityWriter
 from services.input_discovery_service import DiscoveredInputs, DiscoveredPathTriplet
+from services.explainability import ExplainabilityRecorder
 
 
 class PrepPipelineRuntimeTests(unittest.TestCase):
+    def test_run_pipeline_initializes_explainability_files_after_discovery(self) -> None:
+        docx_triplet = DiscoveredPathTriplet(
+            in_path=Path("/tmp/a.docx"),
+            out_path=Path("/tmp/out/a_checked.docx"),
+            explained_path=Path("/tmp/explained/a_explained.txt"),
+        )
+        pdf_triplet = DiscoveredPathTriplet(
+            in_path=Path("/tmp/b.pdf"),
+            out_path=Path("/tmp/out/b_checked.docx"),
+            explained_path=Path("/tmp/explained/b_explained.txt"),
+        )
+
+        discovery = Mock()
+        discovery.discover.return_value = DiscoveredInputs(
+            docx_paths=[docx_triplet],
+            pdf_paths=[pdf_triplet],
+            image_paths=[],
+            unsupported_paths=[],
+        )
+        document_input = Mock()
+        document_input.load.side_effect = [
+            Mock(blocks=["docx"]),
+            Mock(blocks=["pdf page"]),
+        ]
+        docx_out = Mock()
+
+        explainability = Mock()
+        explainability.finish_doc.return_value = ["header"]
+        explain_writer = Mock()
+
+        pipeline = PrepPipeline(
+            app_root="/tmp",
+            input_discovery_service=discovery,
+            document_input_service=document_input,
+            docx_out_service=docx_out,
+            explainability=explainability,
+            explain_file_writer=explain_writer,
+        )
+
+        pipeline.run_pipeline()
+
+        self.assertEqual(explainability.reset.call_count, 2)
+        explainability.start_doc.assert_any_call(
+            docx_path=docx_triplet.out_path,
+            include_edited_text=True,
+        )
+        explainability.start_doc.assert_any_call(
+            docx_path=pdf_triplet.out_path,
+            include_edited_text=True,
+        )
+        explain_writer.write_to_path.assert_any_call(
+            explained_path=docx_triplet.explained_path,
+            lines=["header"],
+        )
+        explain_writer.write_to_path.assert_any_call(
+            explained_path=pdf_triplet.explained_path,
+            lines=["header"],
+        )
+        self.assertEqual(explain_writer.write_to_path.call_count, 2)
+
     def test_run_pipeline_processes_docx_and_pdf_paths(self) -> None:
         docx_triplet_1 = DiscoveredPathTriplet(
             in_path=Path("/tmp/a.docx"),
@@ -155,6 +221,122 @@ class PrepPipelineRuntimeTests(unittest.TestCase):
                 paragraphs=["line one", "line two"],
             )
             ocr_server_proc.stop.assert_called_once_with()
+
+    def test_run_pipeline_appends_prep_stage_line_for_pdf(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_triplet = DiscoveredPathTriplet(
+                in_path=Path(tmpdir) / "essay.pdf",
+                out_path=Path(tmpdir) / "out" / "essay_checked.docx",
+                explained_path=Path(tmpdir) / "explained" / "essay_explained.txt",
+            )
+            pdf_triplet.in_path.write_text("placeholder", encoding="utf-8")
+
+            discovery = Mock()
+            discovery.discover.return_value = DiscoveredInputs(
+                docx_paths=[],
+                pdf_paths=[pdf_triplet],
+                image_paths=[],
+                unsupported_paths=[],
+            )
+            document_input = Mock()
+            document_input.load.return_value = Mock(blocks=["Page one"])
+            docx_out = Mock()
+
+            explainability = ExplainabilityRecorder.new(
+                run_cfg=RunConfig.from_strings(author="tester"),
+                ged_cfg=GedConfig.from_strings(model_name="ged-model"),
+                llm_config=LlmConfig.from_strings(
+                    llama_server_model="demo",
+                    llama_model_key="demo",
+                    llama_model_display_name="Demo",
+                    llama_model_alias="demo",
+                    llama_model_family="instruct",
+                ),
+                ocr_config=OcrConfig.from_strings(
+                    ocr_server_model="ocr",
+                    ocr_model_key="ocr",
+                    ocr_model_display_name="OCR",
+                    ocr_model_alias="ocr",
+                    ocr_model_family="vision",
+                ),
+            )
+            explain_writer = ExplainabilityWriter(output_dir=Path(tmpdir) / "unused")
+
+            pipeline = PrepPipeline(
+                app_root=tmpdir,
+                input_discovery_service=discovery,
+                document_input_service=document_input,
+                docx_out_service=docx_out,
+                explainability=explainability,
+                explain_file_writer=explain_writer,
+            )
+
+            pipeline.run_pipeline()
+
+            explained_text = pdf_triplet.explained_path.read_text(encoding="utf-8")
+            self.assertIn("[PREP STAGE] Extracted text from pdf.\n", explained_text)
+
+    def test_run_pipeline_appends_prep_stage_line_for_image(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            image_path = Path(tmpdir) / "scan.png"
+            image_path.write_bytes(b"image-bytes")
+
+            image_triplet = DiscoveredPathTriplet(
+                in_path=image_path,
+                out_path=Path(tmpdir) / "out" / "scan_checked.docx",
+                explained_path=Path(tmpdir) / "explained" / "scan_explained.txt",
+            )
+
+            discovery = Mock()
+            discovery.discover.return_value = DiscoveredInputs(
+                docx_paths=[],
+                pdf_paths=[],
+                image_paths=[image_triplet],
+                unsupported_paths=[],
+            )
+
+            ocr_server_proc = Mock()
+            ocr_service = Mock()
+            ocr_service.extract_text.return_value = "line one\nline two"
+            docx_out = Mock()
+            lifecycle = Mock()
+
+            explainability = ExplainabilityRecorder.new(
+                run_cfg=RunConfig.from_strings(author="tester"),
+                ged_cfg=GedConfig.from_strings(model_name="ged-model"),
+                llm_config=LlmConfig.from_strings(
+                    llama_server_model="demo",
+                    llama_model_key="demo",
+                    llama_model_display_name="Demo",
+                    llama_model_alias="demo",
+                    llama_model_family="instruct",
+                ),
+                ocr_config=OcrConfig.from_strings(
+                    ocr_server_model="ocr",
+                    ocr_model_key="ocr",
+                    ocr_model_display_name="OCR",
+                    ocr_model_alias="ocr",
+                    ocr_model_family="vision",
+                ),
+            )
+            explain_writer = ExplainabilityWriter(output_dir=Path(tmpdir) / "unused")
+
+            pipeline = PrepPipeline(
+                app_root=tmpdir,
+                input_discovery_service=discovery,
+                document_input_service=Mock(),
+                docx_out_service=docx_out,
+                explainability=explainability,
+                explain_file_writer=explain_writer,
+                ocr_server_proc=ocr_server_proc,
+                ocr_service=ocr_service,
+                runtime_lifecycle=lifecycle,
+            )
+
+            pipeline.run_pipeline()
+
+            explained_text = image_triplet.explained_path.read_text(encoding="utf-8")
+            self.assertIn("[PREP STAGE] Extracted text from image.\n", explained_text)
 
 
 if __name__ == "__main__":
