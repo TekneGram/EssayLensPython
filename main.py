@@ -11,11 +11,12 @@ from app.container import build_container
 from app.pipeline_prep import PrepPipeline
 from app.pipeline_metadata import MetadataPipeline
 from app.pipeline_fb import FBPipeline
+from app.pipeline_conclusion import ConclusionPipeline
+from app.pipeline_body import BodyPipeline
 from app.pipeline_ged import GEDPipeline
 from app.runtime_lifecycle import RuntimeLifecycle
 
 from nlp.llm.llm_client import ChatResponse, JsonSchemaChatRequest
-from nlp.llm.tasks.test_sequential import run_sequential_stream_demo
 
 def main():
     # Handle environment variables for production vs dev later
@@ -106,6 +107,28 @@ def main():
         runtime_lifecycle=runtime_lifecycle,
     )
     fb_pipeline.run_pipeline()
+
+    conclusion_pipeline = ConclusionPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_task_service=llm_task_service,
+        llm_server_proc=deps.get("server_proc"),
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    conclusion_pipeline.run_pipeline()
+
+    body_pipeline = BodyPipeline(
+        app_cfg=app_cfg,
+        discovered_inputs=discovered_inputs,
+        document_input_service=deps["document_input_service"],
+        docx_out_service=deps["docx_out_service"],
+        llm_task_service=llm_task_service,
+        llm_server_proc=deps.get("server_proc"),
+        runtime_lifecycle=runtime_lifecycle,
+    )
+    body_pipeline.run_pipeline()
 
 
 

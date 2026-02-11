@@ -42,6 +42,8 @@ class MainSmokeTests(unittest.TestCase):
         fake_prep_pipeline.run_pipeline.return_value = object()
         fake_metadata_pipeline = Mock()
         fake_fb_pipeline = Mock()
+        fake_conclusion_pipeline = Mock()
+        fake_body_pipeline = Mock()
         fake_ged_pipeline = Mock()
         fake_lifecycle = object()
         fake_ocr_server_proc = object()
@@ -84,6 +86,10 @@ class MainSmokeTests(unittest.TestCase):
         ) as metadata_pipeline_cls, patch(
             "main.FBPipeline", return_value=fake_fb_pipeline
         ) as fb_pipeline_cls, patch(
+            "main.ConclusionPipeline", return_value=fake_conclusion_pipeline
+        ) as conclusion_pipeline_cls, patch(
+            "main.BodyPipeline", return_value=fake_body_pipeline
+        ) as body_pipeline_cls, patch(
             "main.GEDPipeline", return_value=fake_ged_pipeline
         ) as ged_pipeline_cls:
             main.main()
@@ -122,6 +128,24 @@ class MainSmokeTests(unittest.TestCase):
             llm_server_proc=unittest.mock.ANY,
             runtime_lifecycle=fake_lifecycle,
         )
+        conclusion_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
+        body_pipeline_cls.assert_called_once_with(
+            app_cfg=cfg,
+            discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
+            document_input_service=unittest.mock.ANY,
+            docx_out_service=unittest.mock.ANY,
+            llm_task_service=fake_llm_task_service,
+            llm_server_proc=unittest.mock.ANY,
+            runtime_lifecycle=fake_lifecycle,
+        )
         ged_pipeline_cls.assert_called_once_with(
             app_cfg=cfg,
             discovered_inputs=fake_prep_pipeline.run_pipeline.return_value,
@@ -135,6 +159,8 @@ class MainSmokeTests(unittest.TestCase):
         )
         fake_metadata_pipeline.run_pipeline.assert_called_once()
         fake_fb_pipeline.run_pipeline.assert_called_once()
+        fake_conclusion_pipeline.run_pipeline.assert_called_once()
+        fake_body_pipeline.run_pipeline.assert_called_once()
         fake_ged_pipeline.run_pipeline.assert_called_once()
 
 

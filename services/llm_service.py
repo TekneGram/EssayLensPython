@@ -12,7 +12,6 @@ from nlp.llm.llm_client import (
     JsonSchemaChatRequest,
     OpenAICompatChatClient,
 )
-from nlp.llm.tasks.test_parallel import run_parallel_test
 
 
 @dataclass
