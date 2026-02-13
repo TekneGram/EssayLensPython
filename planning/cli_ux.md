@@ -102,11 +102,14 @@ output will be concise terminal text plus a detailed JSON artifact.
    - unquote if quoted
    - resolve relative to current working directory
 3. Validate path exists and extension supported (`.docx`, `.pdf`).
-4. Build app config via `build_settings()`.
-5. Reuse non-interactive model defaults:
-   - keep persisted model/OCR behavior
-   - avoid prompt-driven selection in CLI path
-6. Build dependencies via `build_container(app_cfg)`.
+4. Build app config and resolve runtime artifacts in this exact order:
+   - `build_settings()`
+   - `select_model_and_update_config(app_cfg)` in non-interactive mode
+   - `select_ocr_model_and_update_config(app_cfg)` in non-interactive mode
+   - `bootstrap_llm(app_cfg)` to ensure GGUF/mmproj/server binary exist
+5. Build dependencies via `build_container(app_cfg)`.
+6. Start LLM server process (`server_proc.start()`) before first LLM task
+   execution for the command invocation.
 7. Load document blocks using `document_input_service.load(path)`.
 8. Construct task payload from loaded blocks (single request per target
    file for now).
@@ -116,9 +119,44 @@ output will be concise terminal text plus a detailed JSON artifact.
    - default path:
      `Assessment/explained/cli/<stem>.topic_sentence.json` unless
      overridden by `--json-out`.
-12. Exit with code:
+12. Stop LLM server in `finally` block for one-shot subcommand mode.
+13. Exit with code:
    - `0` success
    - non-zero for parse/IO/runtime failures
+
+## Startup And Lifecycle Policy (Decision-Complete)
+1. Non-interactive model selection is mandatory for CLI flows:
+   - no `input()` prompts are allowed in CLI execution paths.
+   - persisted model key is used when valid.
+   - fallback is hardware-based recommended model if no valid persisted
+     key exists.
+2. Startup sequence for one-shot subcommands
+   (`essaylens topic-sentence --file ...`):
+   - run config/bootstrap sequence
+   - build container
+   - start LLM server once
+   - run command
+   - stop LLM server before process exit
+3. Startup sequence for interactive shell (`essaylens shell`):
+   - initialize parser and shell loop immediately
+   - delay config/bootstrap/server startup until first LLM-backed
+     command (lazy start)
+   - keep server warm across subsequent LLM commands in the same shell
+     session
+   - stop server on `/exit`, EOF, SIGINT, and unhandled shell errors
+4. Health and readiness:
+   - LLM command execution is blocked until `server_proc.start()` health
+     check succeeds.
+   - startup timeout and error from server startup are surfaced as
+     user-facing CLI errors.
+5. Failure handling:
+   - if startup fails, command exits non-zero and does not continue to
+     task execution.
+   - if command execution fails after startup, server is still stopped
+     via `finally`.
+6. Future compatibility requirement:
+   - CLI lifecycle hooks must delegate to the same shared runtime
+     lifecycle primitives used by the Electron backend plan.
 
 ## Command Parsing Rules (Decision-Complete)
 - Slash commands must start with `/`.
@@ -156,11 +194,17 @@ output will be concise terminal text plus a detailed JSON artifact.
 4. unsupported extension
 5. JSON output path override
 6. default JSON output location
+7. one-shot subcommand starts and stops LLM server exactly once
+8. startup failure returns non-zero and does not execute LLM task
+9. runtime failure still triggers server stop
 
 - REPL tests:
 1. `/help` output
 2. `/exit` terminates loop
 3. command error does not terminate loop
+4. first LLM command lazy-starts server
+5. second LLM command reuses warm server instance
+6. shell exit stops running server
 
 - Exit code tests:
 1. success returns `0`
@@ -193,3 +237,5 @@ output will be concise terminal text plus a detailed JSON artifact.
    interactive prompts.
 5. CLI and Electron will coexist in one repository with shared core
    services and separate interface adapters.
+6. CLI startup behavior uses lazy-start warm sessions for REPL and
+   start/stop-per-invocation for one-shot subcommands.
