@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from cli.runner import CliSession
+from cli.runner import CliSession, RuntimeStageError
 
 
 class CliRunnerRuntimeTests(unittest.TestCase):
@@ -74,6 +74,29 @@ class CliRunnerRuntimeTests(unittest.TestCase):
             server_proc.start.assert_called_once()
             self.assertIn("tighter", result["suggested_topic_sentence"].lower())
             self.assertTrue(Path(result["json_out"]).exists())
+
+    def test_ensure_runtime_raises_stage_error_with_context(self) -> None:
+        session = CliSession()
+        with patch.object(session, "_build_cfg", side_effect=RuntimeError("boom cfg")):
+            with self.assertRaises(RuntimeStageError) as ctx:
+                session.ensure_runtime_for_llm_task()
+        self.assertEqual(ctx.exception.stage, "build_cfg")
+        self.assertIn("boom cfg", ctx.exception.detail)
+
+    def test_diagnostics_hook_receives_stage_details(self) -> None:
+        captured: list[tuple[str, str]] = []
+
+        def hook(stage: str, detail: str, _tb: str) -> None:
+            captured.append((stage, detail))
+
+        session = CliSession(diagnostics_hook=hook)
+        with patch.object(session, "_build_cfg", side_effect=RuntimeError("cfg error")):
+            with self.assertRaises(RuntimeStageError):
+                session.ensure_runtime_for_llm_task()
+
+        self.assertTrue(captured)
+        self.assertEqual(captured[0][0], "build_cfg")
+        self.assertIn("cfg error", captured[0][1])
 
 
 if __name__ == "__main__":

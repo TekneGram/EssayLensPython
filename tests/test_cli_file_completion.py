@@ -4,7 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cli.file_completion import ActiveAtToken, find_active_at_token, find_matching_files, replace_active_at_token
+from cli.file_completion import (
+    ActiveAtToken,
+    find_active_at_token,
+    find_matching_files,
+    normalize_selected_path,
+    replace_active_at_token,
+)
 
 
 class CliFileCompletionTests(unittest.TestCase):
@@ -57,6 +63,13 @@ class CliFileCompletionTests(unittest.TestCase):
             self.assertIn(expected_b, matches)
             self.assertNotIn(hidden, matches)
             self.assertEqual(matches[0], expected_a)
+
+    def test_normalize_selected_path_converts_relative_to_absolute(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            rel = "Assessment/in/student/file.docx"
+            normalized = normalize_selected_path(rel, root=root)
+            self.assertEqual(normalized, str((root / rel).resolve()))
 
 
 if __name__ == "__main__":

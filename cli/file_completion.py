@@ -52,6 +52,17 @@ def replace_active_at_token(text: str, token: ActiveAtToken, selected_path: str)
     return f"{text[:token.start]}{replacement}{text[token.end:]}"
 
 
+def normalize_selected_path(selected: str, *, root: Path | None = None) -> str:
+    value = (selected or "").strip()
+    if not value:
+        return value
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return str(path.resolve())
+    base = (root or Path.cwd()).resolve()
+    return str((base / path).resolve())
+
+
 def find_matching_files(
     query: str,
     *,
@@ -66,7 +77,8 @@ def find_matching_files(
 
     base = (root or Path.cwd()).resolve()
     ignored = set(ignore_dirs or DEFAULT_IGNORE_DIRS)
-    ranked: list[tuple[int, str]] = []
+    ranked: list[tuple[int, int, str]] = []
+    query_has_path_sep = "/" in search_query or "\\" in search_query
 
     for dirpath, dirnames, filenames in os.walk(base, topdown=True):
         dirnames[:] = [d for d in dirnames if d not in ignored and not d.startswith(".")]
@@ -86,7 +98,9 @@ def find_matching_files(
                 score = 2
             else:
                 continue
-            ranked.append((score, abs_path))
+            rel_depth = rel.count(os.sep)
+            depth_score = rel_depth if query_has_path_sep else 0
+            ranked.append((score, depth_score, abs_path))
 
-    ranked.sort(key=lambda item: (item[0], item[1]))
-    return [path for _, path in ranked[:max_results]]
+    ranked.sort(key=lambda item: (item[0], item[1], item[2]))
+    return [path for _, _, path in ranked[:max_results]]

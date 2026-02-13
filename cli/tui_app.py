@@ -12,8 +12,8 @@ from cli.file_completion import (
     replace_active_at_token,
 )
 from cli.parser import parse_shell_command
-from cli.runner import CliSession
 from cli.tui_state import TuiState
+from cli.worker_client import WorkerClient, WorkerClientError, WorkerCommandError
 
 try:
     from textual.app import App, ComposeResult
@@ -128,12 +128,13 @@ if TEXTUAL_AVAILABLE:
             ("escape", "completion_cancel", "Completion Cancel"),
         ]
 
-        def __init__(self, session: CliSession | None = None) -> None:
+        def __init__(self, worker: WorkerClient | None = None) -> None:
             super().__init__()
-            self.session = session or CliSession()
+            self.worker = worker or WorkerClient()
             self.state = TuiState()
             self._completion_task: asyncio.Task[None] | None = None
             self._completion_nonce = 0
+            self._busy = False
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
@@ -151,12 +152,16 @@ if TEXTUAL_AVAILABLE:
 
         async def on_mount(self) -> None:
             self._log("EssayLens TUI ready. Type /help for commands.")
-            self._refresh_status()
+            try:
+                await self.worker.start()
+            except Exception as exc:
+                self._log(f"Worker failed to start: {exc}")
+            await self._refresh_status()
             self._render_completion()
             self.query_one(Input).focus()
 
         async def on_unmount(self) -> None:
-            self.session.stop_llm()
+            await self.worker.shutdown()
 
         def action_clear_log(self) -> None:
             self.query_one(RichLog).clear()
@@ -219,6 +224,10 @@ if TEXTUAL_AVAILABLE:
                 self.action_completion_apply()
                 return
 
+            if self._busy:
+                self._log("Busy: previous command still running.")
+                return
+
             raw = (event.value or "").strip()
             event.input.value = ""
             self._clear_completion()
@@ -239,12 +248,29 @@ if TEXTUAL_AVAILABLE:
                 return
 
             try:
+                self._busy = True
                 await self._dispatch(parsed.name, parsed.args)
+            except WorkerCommandError as exc:
+                self.state.last_error = str(exc)
+                if exc.stage:
+                    self._log(f"Error at stage {exc.stage}: {exc}")
+                else:
+                    self._log(f"Error: {exc}")
+                if "fds_to_keep" in str(exc):
+                    self._log(
+                        "Runtime startup failed in worker process; retry one-shot CLI command for verification."
+                    )
+                if exc.traceback_text:
+                    self._log(f"[debug] traceback:\\n{exc.traceback_text}")
+            except WorkerClientError as exc:
+                self.state.last_error = str(exc)
+                self._log(f"Worker transport error: {exc}")
             except Exception as exc:
                 self.state.last_error = str(exc)
                 self._log(f"Error: {exc}")
             finally:
-                self._refresh_status()
+                self._busy = False
+                await self._refresh_status()
 
         async def _dispatch(self, name: str, args: dict[str, Any]) -> None:
             if name == "help":
@@ -253,7 +279,7 @@ if TEXTUAL_AVAILABLE:
                 return
 
             if name == "llm-list":
-                rows = await asyncio.to_thread(self.session.list_models)
+                rows = await self.worker.call("llm-list", {})
                 for line in _format_model_rows("LLM models", rows["llm"]):
                     self._log(line)
                 for line in _format_model_rows("OCR models", rows["ocr"]):
@@ -263,7 +289,7 @@ if TEXTUAL_AVAILABLE:
 
             if name == "llm-start":
                 model_key = args.get("model_key")
-                result = await asyncio.to_thread(self.session.configure_llm_selection, model_key)
+                result = await self.worker.call("llm-start", {"model_key": model_key})
                 self._log(result["message"])
                 self._log(f"Selected LLM: {result['selected_llm_key']}")
                 self.state.last_result = result
@@ -271,28 +297,29 @@ if TEXTUAL_AVAILABLE:
 
             if name == "ocr-start":
                 model_key = args.get("model_key")
-                result = await asyncio.to_thread(self.session.configure_ocr_selection, model_key)
+                result = await self.worker.call("ocr-start", {"model_key": model_key})
                 self._log(result["message"])
                 self._log(f"Selected OCR model: {result['selected_ocr_key']}")
                 self.state.last_result = result
                 return
 
             if name == "llm-stop":
-                stopped = await asyncio.to_thread(self.session.stop_llm)
+                stop_result = await self.worker.call("llm-stop", {})
+                stopped = bool(stop_result.get("stopped", False))
                 self._log("LLM server stopped." if stopped else "LLM server already stopped.")
                 self.state.last_result = {"stopped": stopped}
                 return
 
             if name == "llm-switch":
                 model_key = str(args["model_key"])
-                result = await asyncio.to_thread(self.session.switch_llm, model_key)
+                result = await self.worker.call("llm-switch", {"model_key": model_key})
                 self._log(result["message"])
                 self._log(f"Selected LLM: {result['selected_llm_key']}")
                 self.state.last_result = result
                 return
 
             if name == "llm-status":
-                status = await asyncio.to_thread(self.session.status)
+                status = await self.worker.call("llm-status", {})
                 for line in _render_status(status).splitlines():
                     self._log(line)
                 self.state.last_result = status
@@ -302,12 +329,14 @@ if TEXTUAL_AVAILABLE:
                 file_path = str(args["file"])
                 max_concurrency = args.get("max_concurrency")
                 json_out = args.get("json_out")
-                self._log("Running topic sentence analysis...")
-                result = await asyncio.to_thread(
-                    self.session.run_topic_sentence,
-                    file_path,
-                    max_concurrency=max_concurrency,
-                    json_out=json_out,
+                self._log("Starting runtime and running topic sentence analysis...")
+                result = await self.worker.call(
+                    "topic-sentence",
+                    {
+                        "file": file_path,
+                        "max_concurrency": max_concurrency,
+                        "json_out": json_out,
+                    },
                 )
                 self._log("Topic sentence analysis complete.")
                 self._log(f"File: {result['file']}")
@@ -319,8 +348,15 @@ if TEXTUAL_AVAILABLE:
 
             raise ValueError(f"Unknown command: {name}")
 
-        def _refresh_status(self) -> None:
-            status = self.session.status()
+        async def _refresh_status(self) -> None:
+            try:
+                status = await self.worker.call("llm-status", {}, retry_once=True, timeout_s=20.0)
+            except Exception:
+                status = {
+                    "selected_llm_key": self.state.status.get("selected_llm_key"),
+                    "running": False,
+                    "endpoint": None,
+                }
             self.state.status = status
             self.query_one("#status", Static).update(_render_status(status))
 

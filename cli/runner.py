@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
+import traceback
 from typing import Any
 
 from app.bootstrap_llm import bootstrap_llm
@@ -20,11 +21,22 @@ from cli.output import print_model_rows
 from docx_tools.sentence_splitter import split_sentences
 
 
+@dataclass(frozen=True)
+class RuntimeStageError(RuntimeError):
+    stage: str
+    detail: str
+    traceback_text: str
+
+    def __str__(self) -> str:
+        return f"Error at stage {self.stage}: {self.detail}"
+
+
 @dataclass
 class CliSession:
     runtime_lifecycle: RuntimeLifecycle = field(default_factory=RuntimeLifecycle)
     app_cfg: AppConfig | None = None
     deps: dict[str, Any] | None = None
+    diagnostics_hook: Any = None
 
     def _build_cfg(self, llm_key: str | None = None, ocr_key: str | None = None) -> AppConfig:
         cfg = build_settings()
@@ -104,18 +116,18 @@ class CliSession:
 
     def ensure_runtime_for_llm_task(self) -> None:
         if self.deps is None or self.app_cfg is None:
-            cfg = self._build_cfg()
-            cfg = bootstrap_llm(cfg)
-            deps = build_container(cfg)
-            self.app_cfg = cfg
-            self.deps = deps
+            cfg = self._run_stage("build_cfg", self._build_cfg)
+            cfg = self._run_stage("bootstrap_llm", bootstrap_llm, cfg)
+            deps = self._run_stage("build_container", build_container, cfg)
+            self.app_cfg = cfg  # type: ignore[assignment]
+            self.deps = deps  # type: ignore[assignment]
 
         proc = self._server_proc()
         if proc is None:
             raise RuntimeError("LLM server process is not available in container.")
         if not proc.is_running():
             self.runtime_lifecycle.register_process(proc)
-            proc.start()
+            self._run_stage("llm_server_start", proc.start)
 
     def stop_llm(self) -> bool:
         proc = self._server_proc()
@@ -223,3 +235,17 @@ class CliSession:
         if self.deps is None:
             return None
         return self.deps.get("server_proc")
+
+    def _run_stage(self, stage: str, func: Any, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except RuntimeStageError:
+            raise
+        except Exception as exc:
+            tb = traceback.format_exc()
+            if callable(self.diagnostics_hook):
+                try:
+                    self.diagnostics_hook(stage, str(exc), tb)
+                except Exception:
+                    pass
+            raise RuntimeStageError(stage=stage, detail=str(exc), traceback_text=tb) from exc
