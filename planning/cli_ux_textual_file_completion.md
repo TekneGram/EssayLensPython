@@ -1,3 +1,7 @@
+# To run one-shot tests in the terminal:
+python -m cli.tui_app
+python -m cli.main shell
+
 # Textual `@file` Recursive Autocomplete Plan
 
 ## Summary

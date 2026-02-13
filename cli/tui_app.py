@@ -84,6 +84,10 @@ if TEXTUAL_AVAILABLE:
     class EssayLensTuiApp(App[None]):
         TITLE = "EssayLens TUI"
         CSS = """
+        Screen {
+            background: #e6e6e6;
+            color: #111111;
+        }
         #root {
             layout: vertical;
             height: 100%;
@@ -96,11 +100,15 @@ if TEXTUAL_AVAILABLE:
             width: 2fr;
             border: round $primary;
             padding: 1;
+            background: #f2f2f2;
+            color: #111111;
         }
         #right {
             width: 1fr;
             border: round $accent;
             padding: 1;
+            background: #f2f2f2;
+            color: #111111;
         }
         #cmd {
             dock: bottom;
@@ -116,6 +124,14 @@ if TEXTUAL_AVAILABLE:
         }
         #status {
             height: 1fr;
+        }
+        RichLog {
+            background: #f7f7f7;
+            color: #111111;
+        }
+        Input {
+            background: #f7f7f7;
+            color: #111111;
         }
         """
 
