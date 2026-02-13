@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from cli.file_completion import ActiveAtToken, find_active_at_token, find_matching_files, replace_active_at_token
 from cli.parser import parse_shell_command
 from cli.runner import CliSession
 from cli.tui_state import TuiState
@@ -98,6 +99,14 @@ if TEXTUAL_AVAILABLE:
             dock: bottom;
             margin: 1 0 0 0;
         }
+        #completion {
+            dock: bottom;
+            border: round $secondary;
+            padding: 0 1;
+            max-height: 8;
+            margin: 0;
+            display: none;
+        }
         #status {
             height: 1fr;
         }
@@ -106,12 +115,18 @@ if TEXTUAL_AVAILABLE:
         BINDINGS = [
             ("ctrl+l", "clear_log", "Clear Log"),
             ("ctrl+c", "quit", "Quit"),
+            ("up", "completion_up", "Completion Up"),
+            ("down", "completion_down", "Completion Down"),
+            ("tab", "completion_apply", "Completion Apply"),
+            ("escape", "completion_cancel", "Completion Cancel"),
         ]
 
         def __init__(self, session: CliSession | None = None) -> None:
             super().__init__()
             self.session = session or CliSession()
             self.state = TuiState()
+            self._completion_task: asyncio.Task[None] | None = None
+            self._completion_nonce = 0
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
@@ -124,11 +139,13 @@ if TEXTUAL_AVAILABLE:
                         yield Static("Status", classes="pane-title")
                         yield Static(id="status")
                 yield Input(placeholder="Type slash command, e.g. /llm-list", id="cmd")
+                yield Static(id="completion")
             yield Footer()
 
         async def on_mount(self) -> None:
             self._log("EssayLens TUI ready. Type /help for commands.")
             self._refresh_status()
+            self._render_completion()
             self.query_one(Input).focus()
 
         async def on_unmount(self) -> None:
@@ -138,9 +155,46 @@ if TEXTUAL_AVAILABLE:
             self.query_one(RichLog).clear()
             self._log("Log cleared.")
 
+        def action_completion_up(self) -> None:
+            if not self.state.completion_active or not self.state.completion_items:
+                return
+            self.state.completion_index = (self.state.completion_index - 1) % len(self.state.completion_items)
+            self._render_completion()
+
+        def action_completion_down(self) -> None:
+            if not self.state.completion_active or not self.state.completion_items:
+                return
+            self.state.completion_index = (self.state.completion_index + 1) % len(self.state.completion_items)
+            self._render_completion()
+
+        def action_completion_apply(self) -> None:
+            if not self.state.completion_active or not self.state.completion_items:
+                return
+            selected_path = self.state.completion_items[self.state.completion_index]
+            token = ActiveAtToken(
+                start=self.state.completion_start,
+                end=self.state.completion_end,
+                query=self.state.completion_query,
+            )
+            cmd_input = self.query_one(Input)
+            new_text = replace_active_at_token(cmd_input.value, token, selected_path)
+            cmd_input.value = new_text
+            cmd_input.cursor_position = len(new_text)
+            self._clear_completion()
+
+        def action_completion_cancel(self) -> None:
+            if not self.state.completion_active:
+                return
+            self._clear_completion()
+
+        async def on_input_changed(self, event: Input.Changed) -> None:
+            cursor = getattr(event.input, "cursor_position", len(event.value or ""))
+            self._schedule_completion(event.value or "", cursor)
+
         async def on_input_submitted(self, event: Input.Submitted) -> None:
             raw = (event.value or "").strip()
             event.input.value = ""
+            self._clear_completion()
             if not raw:
                 return
             self.state.command_history.append(raw)
@@ -246,6 +300,63 @@ if TEXTUAL_AVAILABLE:
         def _log(self, line: str) -> None:
             self.query_one(RichLog).write(line)
 
+        def _schedule_completion(self, text: str, cursor: int) -> None:
+            token = find_active_at_token(text, cursor)
+            if token is None or len(token.query) < 4:
+                self._clear_completion()
+                return
+
+            self._completion_nonce += 1
+            nonce = self._completion_nonce
+            if self._completion_task is not None and not self._completion_task.done():
+                self._completion_task.cancel()
+
+            async def _run() -> None:
+                try:
+                    await asyncio.sleep(0.15)
+                    items = await asyncio.to_thread(find_matching_files, token.query)
+                except asyncio.CancelledError:
+                    return
+
+                if nonce != self._completion_nonce:
+                    return
+                if not items:
+                    self._clear_completion()
+                    return
+
+                self.state.completion_active = True
+                self.state.completion_query = token.query
+                self.state.completion_items = items
+                self.state.completion_index = 0
+                self.state.completion_start = token.start
+                self.state.completion_end = token.end
+                self._render_completion()
+
+            self._completion_task = asyncio.create_task(_run())
+
+        def _clear_completion(self) -> None:
+            self.state.completion_active = False
+            self.state.completion_query = ""
+            self.state.completion_items = []
+            self.state.completion_index = 0
+            self.state.completion_start = 0
+            self.state.completion_end = 0
+            self._render_completion()
+
+        def _render_completion(self) -> None:
+            widget = self.query_one("#completion", Static)
+            if not self.state.completion_active or not self.state.completion_items:
+                widget.styles.display = "none"
+                widget.update("")
+                return
+
+            lines = []
+            for idx, item in enumerate(self.state.completion_items):
+                marker = ">" if idx == self.state.completion_index else " "
+                lines.append(f"{marker} {item}")
+            widget.styles.display = "block"
+            widget.update("\n".join(lines))
+
 
 def main() -> int:
     if not TEXTUAL_AVAILABLE:
@@ -258,4 +369,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

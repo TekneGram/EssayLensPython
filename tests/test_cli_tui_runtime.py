@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -66,7 +67,61 @@ class CliTuiRuntimeTests(unittest.IsolatedAsyncioTestCase):
         await app.on_unmount()
         session.stop_llm.assert_called_once()
 
+    async def test_completion_activates_after_four_chars(self) -> None:
+        session = Mock()
+        session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
+        app = tui_app.EssayLensTuiApp(session=session)
+        app._render_completion = Mock()  # type: ignore[method-assign]
+
+        with patch("asyncio.sleep", new=AsyncMock(return_value=None)), patch(
+            "asyncio.to_thread",
+            new=AsyncMock(return_value=["/tmp/Assessment/in/sample.docx"]),
+        ):
+            text = "/topic-sentence @asse"
+            app._schedule_completion(text, len(text))
+            assert app._completion_task is not None
+            await app._completion_task
+
+        self.assertTrue(app.state.completion_active)
+        self.assertEqual(app.state.completion_items[0], "/tmp/Assessment/in/sample.docx")
+
+    async def test_completion_clears_below_threshold(self) -> None:
+        session = Mock()
+        session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
+        app = tui_app.EssayLensTuiApp(session=session)
+        app._render_completion = Mock()  # type: ignore[method-assign]
+        app.state.completion_active = True
+        app.state.completion_items = ["Assessment/in/sample.docx"]
+
+        text = "/topic-sentence @ass"
+        app._schedule_completion(text, len(text))
+        await asyncio.sleep(0)
+
+        self.assertFalse(app.state.completion_active)
+        self.assertEqual(app.state.completion_items, [])
+
+    async def test_completion_apply_replaces_full_token(self) -> None:
+        session = Mock()
+        session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
+        app = tui_app.EssayLensTuiApp(session=session)
+        app._clear_completion = Mock()  # type: ignore[method-assign]
+
+        cmd_input = Mock()
+        cmd_input.value = "/topic-sentence @Assessment/in/sample.docx trailing"
+        cmd_input.cursor_position = cmd_input.value.index("@Assessment") + len("@Assess")
+
+        app.state.completion_active = True
+        app.state.completion_items = ["/tmp/full/path/file.docx"]
+        app.state.completion_index = 0
+        app.state.completion_start = cmd_input.value.index("@Assessment")
+        app.state.completion_end = cmd_input.value.index(" trailing")
+        app.state.completion_query = "Assess"
+
+        with patch.object(app, "query_one", return_value=cmd_input):
+            app.action_completion_apply()
+
+        self.assertEqual(cmd_input.value, "/topic-sentence @/tmp/full/path/file.docx trailing")
+
 
 if __name__ == "__main__":
     unittest.main()
-
