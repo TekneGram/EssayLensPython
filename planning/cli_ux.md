@@ -49,7 +49,7 @@ output will be concise terminal text plus a detailed JSON artifact.
 ## Cross-Plan Compatibility Requirements (CLI + Electron)
 1. CLI must run as a thin interface adapter over shared non-interactive
    application services, not a separate execution stack.
-2. CLI entrypoint remains `app.cli`; Electron backend entrypoint remains
+2. CLI entrypoint remains `cli.main`; Electron backend entrypoint remains
    `app.backend_server`; neither should import UI transport logic from
    the other.
 3. Any orchestration extracted from `main.py` must be reusable by both
@@ -70,7 +70,7 @@ output will be concise terminal text plus a detailed JSON artifact.
 
 ## Public Interfaces And Commands
 - New executable entrypoint:
-1. `python -m app.cli` (initial)
+1. `python -m cli.main` (initial)
 2. Optional packaging alias later: `essaylens`
 
 - New command interfaces:
@@ -95,22 +95,22 @@ output will be concise terminal text plus a detailed JSON artifact.
 9. Utility commands: `/help`, `/exit`
 
 ## Proposed File/Module Additions
-1. `app/cli.py`
+1. `cli/main.py`
    - `main(argv: list[str] | None = None) -> int`
    - top-level argparse/subcommand routing
-2. `app/cli_shell.py`
+2. `cli/shell.py`
    - REPL loop, slash parsing, dispatch calls
-3. `app/cli_parser.py`
+3. `cli/parser.py`
    - slash-command grammar parser
    - `@file` token extraction and validation helpers
-4. `app/cli_runner.py`
+4. `cli/runner.py`
    - command execution layer:
      - load settings
      - run CLI model-management commands
      - lazily build container/start server when LLM task command runs
      - prepare `LlmTaskService`
      - call topic-sentence analysis
-5. `app/cli_output.py`
+5. `cli/output.py`
    - print concise user-facing result
    - write JSON artifact
 6. `tests/test_cli_parser.py`
@@ -121,6 +121,7 @@ output will be concise terminal text plus a detailed JSON artifact.
    - shared config/path resolver
    - shared result/error schema helpers
 10. optional CLI session-state module:
+   - `cli/session.py`
    - tracks selected model key, running server state, and warm session
 
 ## Data Flow (Topic Sentence Command)
@@ -285,11 +286,11 @@ output will be concise terminal text plus a detailed JSON artifact.
 2. parse/runtime failure returns non-zero
 
 ## Acceptance Criteria
-1. `python -m app.cli topic-sentence --file Assessment/in/sample.docx`
+1. `python -m cli.main topic-sentence --file Assessment/in/sample.docx`
    runs and writes JSON artifact.
-2. `python -m app.cli shell` accepts
+2. `python -m cli.main shell` accepts
    `/topic-sentence @Assessment/in/sample.docx`.
-3. `python -m app.cli shell` supports `/llm-list`, `/llm-start`,
+3. `python -m cli.main shell` supports `/llm-list`, `/llm-start`,
    `/llm-stop`, `/llm-switch`, `/llm-status`, `/ocr-start`.
 4. `/llm-start` persists selection without forcing immediate model load.
 5. First LLM-backed task command loads server/model lazily and reuses it
