@@ -88,6 +88,22 @@ class CliWorkerClientRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"ok": True})
         restart_mock.assert_awaited_once()
 
+    async def test_call_skips_non_json_lines_until_valid_response(self) -> None:
+        resp = WorkerResponse(id=1, ok=True, result={"running": True})
+        proc = _DummyProc(
+            [
+                b"progress: loading model...\n",
+                b"\n",
+                (encode_response(resp) + "\n").encode("utf-8"),
+            ]
+        )
+        client = WorkerClient(timeout_s=1.0)
+        client._proc = proc  # type: ignore[assignment]
+
+        result = await client.call("llm-status", {}, retry_once=False)
+
+        self.assertEqual(result, {"running": True})
+
 
 if __name__ == "__main__":
     unittest.main()

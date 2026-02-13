@@ -103,20 +103,42 @@ class WorkerClient:
             self._proc.stdin.write((encode_request(req) + "\n").encode("utf-8"))
             await self._proc.stdin.drain()
 
-            try:
-                raw = await asyncio.wait_for(self._proc.stdout.readline(), timeout=timeout)
-            except asyncio.TimeoutError as exc:
-                raise WorkerClientError(f"Worker timeout for method {method}.") from exc
-            if not raw:
-                raise WorkerClientError("Worker process closed stdout.")
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + timeout
+            non_protocol_lines: list[str] = []
 
-            try:
-                resp = decode_response(raw.decode("utf-8").strip())
-            except Exception as exc:
-                raise WorkerClientError(f"Invalid worker response: {exc}") from exc
+            while True:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    noise = "; ".join(non_protocol_lines[-3:])
+                    suffix = f" Non-protocol output: {noise}" if noise else ""
+                    raise WorkerClientError(f"Worker timeout for method {method}.{suffix}")
+                try:
+                    raw = await asyncio.wait_for(self._proc.stdout.readline(), timeout=remaining)
+                except asyncio.TimeoutError as exc:
+                    noise = "; ".join(non_protocol_lines[-3:])
+                    suffix = f" Non-protocol output: {noise}" if noise else ""
+                    raise WorkerClientError(f"Worker timeout for method {method}.{suffix}") from exc
+                if not raw:
+                    raise WorkerClientError("Worker process closed stdout.")
 
-            if resp.id not in {req.id, -1}:
-                raise WorkerClientError(f"Worker response id mismatch: expected {req.id}, got {resp.id}")
+                line = raw.decode("utf-8", errors="replace").strip()
+                if not line:
+                    continue
+
+                try:
+                    resp = decode_response(line)
+                except Exception:
+                    non_protocol_lines.append(line)
+                    continue
+
+                if resp.id not in {req.id, -1}:
+                    # With in-order lock semantics this should not happen,
+                    # but ignore mismatched messages to keep protocol robust.
+                    non_protocol_lines.append(line)
+                    continue
+                break
+
             if resp.ok:
                 return resp.result or {}
             error = resp.error
@@ -133,4 +155,3 @@ class WorkerClient:
     async def _restart(self) -> None:
         await self.shutdown()
         await self.start()
-

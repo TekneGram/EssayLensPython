@@ -66,6 +66,20 @@ class CliWorkerServerRuntimeTests(unittest.TestCase):
         self.assertTrue(should_stop)
         session.stop_llm.assert_called_once()
 
+    def test_server_captures_accidental_stdout_as_diagnostic(self) -> None:
+        session = self._make_session()
+
+        def noisy_status() -> dict[str, object]:
+            print("noisy status line")
+            return {"selected_llm_key": None, "running": False, "endpoint": None}
+
+        session.status.side_effect = noisy_status
+        resp, should_stop = _handle_request(session, WorkerRequest(id=5, method="llm-status", params={}))
+
+        self.assertTrue(resp.ok)
+        self.assertFalse(should_stop)
+        self.assertTrue(any(d.get("stage") == "worker_stdout" for d in (resp.diagnostics or [])))
+
 
 if __name__ == "__main__":
     unittest.main()
