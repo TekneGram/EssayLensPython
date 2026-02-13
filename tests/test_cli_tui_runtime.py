@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -105,6 +106,7 @@ class CliTuiRuntimeTests(unittest.IsolatedAsyncioTestCase):
         session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
         app = tui_app.EssayLensTuiApp(session=session)
         app._clear_completion = Mock()  # type: ignore[method-assign]
+        app._log = Mock()  # type: ignore[method-assign]
 
         cmd_input = Mock()
         cmd_input.value = "/topic-sentence @Assessment/in/sample.docx trailing"
@@ -116,11 +118,60 @@ class CliTuiRuntimeTests(unittest.IsolatedAsyncioTestCase):
         app.state.completion_start = cmd_input.value.index("@Assessment")
         app.state.completion_end = cmd_input.value.index(" trailing")
         app.state.completion_query = "Assess"
+        app.state.completion_source_text = cmd_input.value
+        app.state.completion_source_cursor = cmd_input.cursor_position
 
         with patch.object(app, "query_one", return_value=cmd_input):
             app.action_completion_apply()
 
-        self.assertEqual(cmd_input.value, "/topic-sentence @/tmp/full/path/file.docx trailing")
+        expected_path = str(Path("/tmp/full/path/file.docx").resolve())
+        self.assertEqual(cmd_input.value, f"/topic-sentence @{expected_path} trailing")
+
+    async def test_completion_apply_stale_state_retriggers_search(self) -> None:
+        session = Mock()
+        session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
+        app = tui_app.EssayLensTuiApp(session=session)
+        app._clear_completion = Mock()  # type: ignore[method-assign]
+        app._log = Mock()  # type: ignore[method-assign]
+        app._schedule_completion = Mock()  # type: ignore[method-assign]
+
+        cmd_input = Mock()
+        cmd_input.value = "/topic-sentence trailing"
+        cmd_input.cursor_position = len(cmd_input.value)
+
+        app.state.completion_active = True
+        app.state.completion_items = ["/tmp/full/path/file.docx"]
+        app.state.completion_index = 0
+        app.state.completion_start = 16
+        app.state.completion_end = 22
+        app.state.completion_query = "Assess"
+        app.state.completion_source_text = "/topic-sentence @asse"
+        app.state.completion_source_cursor = len("/topic-sentence @asse")
+
+        with patch.object(app, "query_one", return_value=cmd_input):
+            app.action_completion_apply()
+
+        app._schedule_completion.assert_called_once_with(cmd_input.value, cmd_input.cursor_position)
+
+    async def test_enter_applies_completion_instead_of_submitting(self) -> None:
+        session = Mock()
+        session.status.return_value = {"selected_llm_key": None, "running": False, "endpoint": None}
+        app = tui_app.EssayLensTuiApp(session=session)
+        app.action_completion_apply = Mock()  # type: ignore[method-assign]
+        app._log = Mock()  # type: ignore[method-assign]
+
+        app.state.completion_active = True
+        app.state.completion_items = ["/tmp/path/file.docx"]
+        event = Mock()
+        event.value = "/topic-sentence @asse"
+        event.input = Mock()
+        event.input.value = event.value
+
+        with patch("cli.tui_app.parse_shell_command") as parse_mock:
+            await app.on_input_submitted(event)
+
+        app.action_completion_apply.assert_called_once()
+        parse_mock.assert_not_called()
 
 
 if __name__ == "__main__":

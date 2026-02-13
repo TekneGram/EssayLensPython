@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
-from cli.file_completion import ActiveAtToken, find_active_at_token, find_matching_files, replace_active_at_token
+from cli.file_completion import (
+    ActiveAtToken,
+    find_active_at_token,
+    find_matching_files,
+    normalize_selected_path,
+    replace_active_at_token,
+)
 from cli.parser import parse_shell_command
 from cli.runner import CliSession
 from cli.tui_state import TuiState
@@ -170,16 +177,32 @@ if TEXTUAL_AVAILABLE:
         def action_completion_apply(self) -> None:
             if not self.state.completion_active or not self.state.completion_items:
                 return
-            selected_path = self.state.completion_items[self.state.completion_index]
-            token = ActiveAtToken(
-                start=self.state.completion_start,
-                end=self.state.completion_end,
-                query=self.state.completion_query,
-            )
             cmd_input = self.query_one(Input)
-            new_text = replace_active_at_token(cmd_input.value, token, selected_path)
+            current_text = cmd_input.value
+            current_cursor = getattr(cmd_input, "cursor_position", len(current_text))
+
+            token = find_active_at_token(current_text, current_cursor)
+            if token is None:
+                source_matches = (
+                    self.state.completion_source_text == current_text
+                    and self.state.completion_source_cursor == current_cursor
+                )
+                if not source_matches:
+                    self._log("Error: completion state is stale, please try again.")
+                    self._schedule_completion(current_text, current_cursor)
+                    return
+                token = ActiveAtToken(
+                    start=self.state.completion_start,
+                    end=self.state.completion_end,
+                    query=self.state.completion_query,
+                )
+
+            selected_path = self.state.completion_items[self.state.completion_index]
+            selected_path = normalize_selected_path(selected_path, root=Path.cwd())
+            new_text = replace_active_at_token(current_text, token, selected_path)
             cmd_input.value = new_text
             cmd_input.cursor_position = len(new_text)
+            self._log(f"Applied completion: {selected_path}")
             self._clear_completion()
 
         def action_completion_cancel(self) -> None:
@@ -192,6 +215,10 @@ if TEXTUAL_AVAILABLE:
             self._schedule_completion(event.value or "", cursor)
 
         async def on_input_submitted(self, event: Input.Submitted) -> None:
+            if self.state.completion_active and self.state.completion_items:
+                self.action_completion_apply()
+                return
+
             raw = (event.value or "").strip()
             event.input.value = ""
             self._clear_completion()
@@ -330,6 +357,8 @@ if TEXTUAL_AVAILABLE:
                 self.state.completion_index = 0
                 self.state.completion_start = token.start
                 self.state.completion_end = token.end
+                self.state.completion_source_text = text
+                self.state.completion_source_cursor = cursor
                 self._render_completion()
 
             self._completion_task = asyncio.create_task(_run())
@@ -341,6 +370,8 @@ if TEXTUAL_AVAILABLE:
             self.state.completion_index = 0
             self.state.completion_start = 0
             self.state.completion_end = 0
+            self.state.completion_source_text = ""
+            self.state.completion_source_cursor = 0
             self._render_completion()
 
         def _render_completion(self) -> None:
