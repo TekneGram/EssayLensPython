@@ -83,6 +83,7 @@ if TEXTUAL_AVAILABLE:
 
     class EssayLensTuiApp(App[None]):
         TITLE = "EssayLens TUI"
+        COMPLETION_VIEWPORT_ROWS = 8
         CSS = """
         Screen {
             background: #e6e6e6;
@@ -120,7 +121,8 @@ if TEXTUAL_AVAILABLE:
             padding: 0 1;
             max-height: 8;
             margin: 0;
-            display: none;
+            display: block;
+            overflow-y: scroll;
         }
         #status {
             height: 1fr;
@@ -433,10 +435,25 @@ if TEXTUAL_AVAILABLE:
                 widget.update("")
                 return
 
+            items = self.state.completion_items
+            selected = max(0, min(self.state.completion_index, len(items) - 1))
+            window = max(1, self.COMPLETION_VIEWPORT_ROWS)
+
+            start = max(0, selected - (window // 2))
+            end = min(len(items), start + window)
+            start = max(0, end - window)
+
             lines = []
-            for idx, item in enumerate(self.state.completion_items):
-                marker = ">" if idx == self.state.completion_index else " "
+            if start > 0:
+                lines.append("  ...")
+
+            for idx in range(start, end):
+                item = items[idx]
+                marker = ">" if idx == selected else " "
                 lines.append(f"{marker} {item}")
+
+            if end < len(items):
+                lines.append("  ...")
             widget.styles.display = "block"
             widget.update("\n".join(lines))
 

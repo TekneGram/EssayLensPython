@@ -1,6 +1,6 @@
 # To run one-shot tests in the terminal:
-python -m cli.tui_app
-python -m cli.main shell
+python -m cli.tui_app (will load a minimal TUI app)
+python -m cli.main shell (run from command line)
 
 # Textual `@file` Recursive Autocomplete Plan
 
