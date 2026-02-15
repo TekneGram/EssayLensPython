@@ -142,7 +142,7 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["failure_count"], 0)
         self.assertEqual(result["max_concurrency"], 2)
 
-    def test_analyze_cause_effect_parallel_uses_no_think(self) -> None:
+    def test_prompt_tester_parallel_uses_no_think(self) -> None:
         app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
 
         llm_no_think = Mock()
@@ -151,7 +151,7 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         llm_service.with_mode.return_value = llm_no_think
 
         task_service = LlmTaskService(llm_service=llm_service)
-        result = task_service.analyze_cause_effect_parallel(
+        result = task_service.prompt_tester_parallel(
             app_cfg=app_cfg,
             text_tasks=["Paragraph content for cause/effect analysis."],
             max_concurrency=2,
@@ -162,6 +162,32 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["success_count"], 1)
         self.assertEqual(result["failure_count"], 0)
         self.assertEqual(result["max_concurrency"], 2)
+
+    def test_analyze_cause_effect_parallel_delegates_to_prompt_tester(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
+        llm_service = Mock()
+        task_service = LlmTaskService(llm_service=llm_service)
+        expected = {
+            "task_count": 1,
+            "success_count": 1,
+            "failure_count": 0,
+            "max_concurrency": 2,
+            "outputs": [Mock(content="Cause/effect feedback.")],
+        }
+        task_service.prompt_tester_parallel = Mock(return_value=expected)  # type: ignore[method-assign]
+
+        result = task_service.analyze_cause_effect_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["Paragraph content for cause/effect analysis."],
+            max_concurrency=2,
+        )
+
+        task_service.prompt_tester_parallel.assert_called_once_with(  # type: ignore[union-attr]
+            app_cfg=app_cfg,
+            text_tasks=["Paragraph content for cause/effect analysis."],
+            max_concurrency=2,
+        )
+        self.assertEqual(result, expected)
 
     def test_analyze_compare_contrast_parallel_uses_no_think(self) -> None:
         app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=4))
@@ -246,6 +272,36 @@ class LlmTaskServiceRuntimeTests(unittest.TestCase):
         self.assertEqual(result["success_count"], 1)
         self.assertEqual(result["failure_count"], 0)
         self.assertEqual(result["max_concurrency"], 2)
+
+
+    def test_extract_essay_parallel_uses_no_think_and_returns_result(self) -> None:
+        app_cfg = SimpleNamespace(llm_server=SimpleNamespace(llama_n_parallel=2))
+
+        llm_no_think = Mock()
+        llm_no_think.json_schema_chat_many = AsyncMock(
+            return_value=[
+                {
+                    "student_name": "A",
+                    "student_number": "",
+                    "essay_title": "",
+                    "essay": "essay",
+                    "extraneous": "",
+                }
+            ]
+        )
+        llm_service = Mock()
+        llm_service.with_mode.return_value = llm_no_think
+
+        task_service = LlmTaskService(llm_service=llm_service)
+        result = task_service.extract_essay_parallel(
+            app_cfg=app_cfg,
+            text_tasks=["essay text"],
+        )
+
+        llm_service.with_mode.assert_called_once_with("no_think")
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 0)
 
 
 if __name__ == "__main__":

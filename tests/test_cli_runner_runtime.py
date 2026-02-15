@@ -98,6 +98,175 @@ class CliRunnerRuntimeTests(unittest.TestCase):
         self.assertEqual(captured[0][0], "build_cfg")
         self.assertIn("cfg error", captured[0][1])
 
+    def test_run_metadata_success_writes_json_output(self) -> None:
+        session = CliSession()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_path = Path(tmpdir) / "essay.docx"
+            doc_path.write_text("placeholder", encoding="utf-8")
+            out_root = Path(tmpdir) / "explained"
+
+            llm_task_service = Mock()
+            llm_task_service.extract_metadata_parallel.return_value = {
+                "outputs": [
+                    {
+                        "student_name": "Ada",
+                        "student_number": "123",
+                        "essay_title": "On Engines",
+                        "essay": "Body",
+                        "extraneous": "",
+                    }
+                ],
+                "task_count": 1,
+                "success_count": 1,
+                "failure_count": 0,
+            }
+            document_input_service = Mock()
+            document_input_service.load.return_value = SimpleNamespace(blocks=["name", "essay body"])
+            server_proc = Mock()
+            server_proc.is_running.return_value = True
+
+            session.app_cfg = SimpleNamespace(
+                assessment_paths=SimpleNamespace(explained_folder=out_root)
+            )
+            session.deps = {
+                "server_proc": server_proc,
+                "llm_task_service": llm_task_service,
+                "document_input_service": document_input_service,
+            }
+
+            result = session.run_metadata(doc_path)
+
+            self.assertEqual(result["metadata"]["student_name"], "Ada")
+            self.assertTrue(Path(result["json_out"]).exists())
+            llm_task_service.extract_metadata_parallel.assert_called_once()
+
+    def test_run_metadata_rejects_unsupported_file_type(self) -> None:
+        session = CliSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            txt_path = Path(tmpdir) / "essay.txt"
+            txt_path.write_text("x", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Unsupported file type"):
+                session.run_metadata(txt_path)
+
+    def test_run_metadata_rejects_empty_text(self) -> None:
+        session = CliSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_path = Path(tmpdir) / "essay.docx"
+            doc_path.write_text("placeholder", encoding="utf-8")
+
+            llm_task_service = Mock()
+            document_input_service = Mock()
+            document_input_service.load.return_value = SimpleNamespace(blocks=[" ", ""])
+            server_proc = Mock()
+            server_proc.is_running.return_value = True
+
+            session.app_cfg = SimpleNamespace(
+                assessment_paths=SimpleNamespace(explained_folder=Path(tmpdir) / "explained")
+            )
+            session.deps = {
+                "server_proc": server_proc,
+                "llm_task_service": llm_task_service,
+                "document_input_service": document_input_service,
+            }
+
+            with self.assertRaisesRegex(ValueError, "No text found"):
+                session.run_metadata(doc_path)
+
+    def test_run_metadata_raises_when_task_returns_exception(self) -> None:
+        session = CliSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = Path(tmpdir) / "essay.pdf"
+            pdf_path.write_text("placeholder", encoding="utf-8")
+
+            llm_task_service = Mock()
+            llm_task_service.extract_metadata_parallel.return_value = {
+                "outputs": [RuntimeError("bad parse")],
+                "task_count": 1,
+                "success_count": 0,
+                "failure_count": 1,
+            }
+            document_input_service = Mock()
+            document_input_service.load.return_value = SimpleNamespace(blocks=["content"])
+            server_proc = Mock()
+            server_proc.is_running.return_value = True
+
+            session.app_cfg = SimpleNamespace(
+                assessment_paths=SimpleNamespace(explained_folder=Path(tmpdir) / "explained")
+            )
+            session.deps = {
+                "server_proc": server_proc,
+                "llm_task_service": llm_task_service,
+                "document_input_service": document_input_service,
+            }
+
+            with self.assertRaisesRegex(RuntimeError, "Metadata extraction failed"):
+                session.run_metadata(pdf_path)
+
+    def test_run_prompt_test_success_writes_json_output(self) -> None:
+        session = CliSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_path = Path(tmpdir) / "essay.docx"
+            doc_path.write_text("placeholder", encoding="utf-8")
+            out_root = Path(tmpdir) / "explained"
+
+            llm_task_service = Mock()
+            llm_task_service.prompt_tester_parallel.return_value = {
+                "outputs": [SimpleNamespace(content="Use clearer cause/effect links.")],
+                "task_count": 1,
+                "success_count": 1,
+                "failure_count": 0,
+            }
+            document_input_service = Mock()
+            document_input_service.load.return_value = SimpleNamespace(blocks=["essay body"])
+            server_proc = Mock()
+            server_proc.is_running.return_value = True
+
+            session.app_cfg = SimpleNamespace(
+                assessment_paths=SimpleNamespace(explained_folder=out_root)
+            )
+            session.deps = {
+                "server_proc": server_proc,
+                "llm_task_service": llm_task_service,
+                "document_input_service": document_input_service,
+            }
+
+            result = session.run_prompt_test(doc_path)
+
+            self.assertIn("cause/effect", result["feedback"])
+            self.assertTrue(Path(result["json_out"]).exists())
+            llm_task_service.prompt_tester_parallel.assert_called_once()
+
+    def test_run_prompt_test_raises_when_task_returns_exception(self) -> None:
+        session = CliSession()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = Path(tmpdir) / "essay.pdf"
+            pdf_path.write_text("placeholder", encoding="utf-8")
+
+            llm_task_service = Mock()
+            llm_task_service.prompt_tester_parallel.return_value = {
+                "outputs": [RuntimeError("prompt failed")],
+                "task_count": 1,
+                "success_count": 0,
+                "failure_count": 1,
+            }
+            document_input_service = Mock()
+            document_input_service.load.return_value = SimpleNamespace(blocks=["content"])
+            server_proc = Mock()
+            server_proc.is_running.return_value = True
+
+            session.app_cfg = SimpleNamespace(
+                assessment_paths=SimpleNamespace(explained_folder=Path(tmpdir) / "explained")
+            )
+            session.deps = {
+                "server_proc": server_proc,
+                "llm_task_service": llm_task_service,
+                "document_input_service": document_input_service,
+            }
+
+            with self.assertRaisesRegex(RuntimeError, "Prompt test failed"):
+                session.run_prompt_test(pdf_path)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,7 +64,7 @@ class BodyPipeline:
                 (
                     "cause_effect",
                     "Cause and Effect",
-                    self.llm_task_service.analyze_cause_effect_parallel,
+                    self.llm_task_service.prompt_tester_parallel,
                 ),
                 (
                     "compare_contrast",

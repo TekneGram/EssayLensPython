@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+from contextlib import redirect_stdout
 import unittest
 from unittest.mock import Mock
 
@@ -13,10 +15,14 @@ class CliShellRuntimeTests(unittest.TestCase):
         shell.session = Mock()
         shell.session.stop_llm.return_value = False
 
-        code = shell.run()
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            code = shell.run()
 
         self.assertEqual(code, 0)
         shell.session.stop_llm.assert_called()
+        self.assertIn("/metadata @path/to/file.docx", buffer.getvalue())
+        self.assertIn("/prompt-test @path/to/file.docx", buffer.getvalue())
 
     def test_error_does_not_exit_loop(self) -> None:
         inputs = iter(["/unknown", "/exit"])
@@ -48,6 +54,48 @@ class CliShellRuntimeTests(unittest.TestCase):
         self.assertEqual(code, 0)
         shell.session.configure_llm_selection.assert_called_once_with("qwen3_4b_q8")
         shell.session.status.assert_called_once()
+
+    def test_metadata_dispatches_to_session(self) -> None:
+        inputs = iter(["/metadata @/tmp/essay.docx", "/exit"])
+        shell = CliShell(input_fn=lambda _prompt: next(inputs))
+        shell.session = Mock()
+        shell.session.run_metadata.return_value = {
+            "file": "/tmp/essay.docx",
+            "json_out": "/tmp/out.json",
+            "metadata": {
+                "student_name": "Ada",
+                "student_number": "123",
+                "essay_title": "Title",
+            },
+        }
+        shell.session.stop_llm.return_value = False
+
+        code = shell.run()
+
+        self.assertEqual(code, 0)
+        shell.session.run_metadata.assert_called_once_with("/tmp/essay.docx", json_out=None)
+        shell.session.stop_llm.assert_called()
+
+    def test_prompt_test_dispatches_to_session(self) -> None:
+        inputs = iter(["/prompt-test @/tmp/essay.docx", "/exit"])
+        shell = CliShell(input_fn=lambda _prompt: next(inputs))
+        shell.session = Mock()
+        shell.session.run_prompt_test.return_value = {
+            "file": "/tmp/essay.docx",
+            "feedback": "Use more clear causal links.",
+            "json_out": "/tmp/out.json",
+        }
+        shell.session.stop_llm.return_value = False
+
+        code = shell.run()
+
+        self.assertEqual(code, 0)
+        shell.session.run_prompt_test.assert_called_once_with(
+            "/tmp/essay.docx",
+            max_concurrency=None,
+            json_out=None,
+        )
+        shell.session.stop_llm.assert_called()
 
 
 if __name__ == "__main__":

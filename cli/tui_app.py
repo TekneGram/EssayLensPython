@@ -76,6 +76,8 @@ def _help_lines() -> list[str]:
         "  /llm-status",
         "  /ocr-start [model_key]",
         "  /topic-sentence @path/to/file.docx",
+        "  /metadata @path/to/file.docx",
+        "  /prompt-test @path/to/file.docx",
     ]
 
 
@@ -359,6 +361,47 @@ if TEXTUAL_AVAILABLE:
                 self._log("Topic sentence analysis complete.")
                 self._log(f"File: {result['file']}")
                 self._log(f"Suggested topic sentence: {result['suggested_topic_sentence']}")
+                self._log(f"Feedback: {result['feedback']}")
+                self._log(f"JSON: {result['json_out']}")
+                self.state.last_result = result
+                return
+
+            if name == "metadata":
+                file_path = str(args["file"])
+                json_out = args.get("json_out")
+                self._log("Starting runtime and running metadata extraction...")
+                result = await self.worker.call(
+                    "metadata",
+                    {
+                        "file": file_path,
+                        "json_out": json_out,
+                    },
+                )
+                metadata = result.get("metadata", {})
+                self._log("Metadata extraction complete.")
+                self._log(f"File: {result['file']}")
+                self._log(f"Student Name: {metadata.get('student_name', '')}")
+                self._log(f"Student Number: {metadata.get('student_number', '')}")
+                self._log(f"Essay Title: {metadata.get('essay_title', '')}")
+                self._log(f"JSON: {result['json_out']}")
+                self.state.last_result = result
+                return
+
+            if name == "prompt-test":
+                file_path = str(args["file"])
+                max_concurrency = args.get("max_concurrency")
+                json_out = args.get("json_out")
+                self._log("Starting runtime and running prompt test...")
+                result = await self.worker.call(
+                    "prompt-test",
+                    {
+                        "file": file_path,
+                        "max_concurrency": max_concurrency,
+                        "json_out": json_out,
+                    },
+                )
+                self._log("Prompt test complete.")
+                self._log(f"File: {result['file']}")
                 self._log(f"Feedback: {result['feedback']}")
                 self._log(f"JSON: {result['json_out']}")
                 self.state.last_result = result

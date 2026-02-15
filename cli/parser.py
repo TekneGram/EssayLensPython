@@ -39,17 +39,21 @@ def parse_shell_command(line: str) -> ParsedCommand:
             raise ValueError("/llm-switch requires exactly one model key.")
         return ParsedCommand(name=cmd, args={"model_key": rest[0]})
 
-    if cmd == "topic-sentence":
+    if cmd in {"topic-sentence", "metadata", "prompt-test"}:
         if not rest:
-            raise ValueError("/topic-sentence requires a @file argument.")
+            raise ValueError(f"/{cmd} requires a @file argument.")
         file_tokens = [tok for tok in rest if tok.startswith("@")] 
         if len(file_tokens) != 1:
-            raise ValueError("/topic-sentence requires exactly one @file argument.")
+            raise ValueError(f"/{cmd} requires exactly one @file argument.")
         if len(rest) != 1:
-            raise ValueError("/topic-sentence accepts only one @file argument.")
+            raise ValueError(f"/{cmd} accepts only one @file argument.")
         raw_path = file_tokens[0][1:]
         if not raw_path:
             raise ValueError("@file argument is empty.")
-        return ParsedCommand(name=cmd, args={"file": raw_path, "max_concurrency": None, "json_out": None})
+        if cmd == "topic-sentence":
+            return ParsedCommand(name=cmd, args={"file": raw_path, "max_concurrency": None, "json_out": None})
+        if cmd == "prompt-test":
+            return ParsedCommand(name=cmd, args={"file": raw_path, "max_concurrency": None, "json_out": None})
+        return ParsedCommand(name=cmd, args={"file": raw_path, "json_out": None})
 
     raise ValueError(f"Unknown command: /{cmd}")

@@ -91,7 +91,7 @@ class BodyPipelineRuntimeTests(unittest.TestCase):
                 }
 
             llm_task_service.analyze_hedging_parallel.side_effect = _hedging_side_effect
-            llm_task_service.analyze_cause_effect_parallel.side_effect = _cause_effect_side_effect
+            llm_task_service.prompt_tester_parallel.side_effect = _cause_effect_side_effect
             llm_task_service.analyze_compare_contrast_parallel.side_effect = _compare_contrast_side_effect
 
             docx_out_service = Mock()

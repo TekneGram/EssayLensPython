@@ -56,6 +56,60 @@ class CliTuiRuntimeTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    async def test_metadata_dispatch_uses_worker(self) -> None:
+        worker = Mock()
+        worker.call = AsyncMock(
+            return_value={
+                "file": "/tmp/essay.docx",
+                "json_out": "/tmp/meta.json",
+                "metadata": {
+                    "student_name": "Ada",
+                    "student_number": "123",
+                    "essay_title": "Title",
+                },
+            }
+        )
+
+        app = tui_app.EssayLensTuiApp(worker=worker)
+        app._log = Mock()  # type: ignore[method-assign]
+
+        await app._dispatch("metadata", {"file": "/tmp/essay.docx", "json_out": None})
+
+        worker.call.assert_awaited_once_with(
+            "metadata",
+            {
+                "file": "/tmp/essay.docx",
+                "json_out": None,
+            },
+        )
+
+    async def test_prompt_test_dispatch_uses_worker(self) -> None:
+        worker = Mock()
+        worker.call = AsyncMock(
+            return_value={
+                "file": "/tmp/essay.docx",
+                "feedback": "Use clearer causal transitions.",
+                "json_out": "/tmp/prompt.json",
+            }
+        )
+
+        app = tui_app.EssayLensTuiApp(worker=worker)
+        app._log = Mock()  # type: ignore[method-assign]
+
+        await app._dispatch(
+            "prompt-test",
+            {"file": "/tmp/essay.docx", "max_concurrency": None, "json_out": None},
+        )
+
+        worker.call.assert_awaited_once_with(
+            "prompt-test",
+            {
+                "file": "/tmp/essay.docx",
+                "max_concurrency": None,
+                "json_out": None,
+            },
+        )
+
     async def test_shutdown_calls_worker_shutdown(self) -> None:
         worker = Mock()
         worker.shutdown = AsyncMock()

@@ -16,6 +16,8 @@ def print_help() -> None:
     print("  /llm-status")
     print("  /ocr-start [model_key]")
     print("  /topic-sentence @path/to/file.docx")
+    print("  /metadata @path/to/file.docx")
+    print("  /prompt-test @path/to/file.docx")
 
 
 def print_llm_status(payload: dict[str, Any]) -> None:
@@ -50,5 +52,22 @@ def print_topic_sentence_result(result: dict[str, Any]) -> None:
     print("Topic sentence analysis complete")
     print(f"File: {result['file']}")
     print(f"Suggested topic sentence: {result['suggested_topic_sentence']}")
+    print(f"Feedback: {result['feedback']}")
+    print(f"JSON: {result['json_out']}")
+
+
+def print_metadata_result(result: dict[str, Any]) -> None:
+    metadata = result.get("metadata", {})
+    print("Metadata extraction complete")
+    print(f"File: {result['file']}")
+    print(f"Student Name: {metadata.get('student_name', '')}")
+    print(f"Student Number: {metadata.get('student_number', '')}")
+    print(f"Essay Title: {metadata.get('essay_title', '')}")
+    print(f"JSON: {result['json_out']}")
+
+
+def print_prompt_test_result(result: dict[str, Any]) -> None:
+    print("Prompt test complete")
+    print(f"File: {result['file']}")
     print(f"Feedback: {result['feedback']}")
     print(f"JSON: {result['json_out']}")

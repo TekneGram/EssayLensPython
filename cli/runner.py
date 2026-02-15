@@ -231,6 +231,121 @@ class CliSession:
         json_path.write_text(json.dumps(result, indent=2, ensure_ascii=True), encoding="utf-8")
         return result
 
+    def run_metadata(
+        self,
+        file_path: str | Path,
+        *,
+        json_out: str | Path | None = None,
+    ) -> dict[str, Any]:
+        src_path = Path(file_path).expanduser().resolve()
+        if not src_path.exists():
+            raise FileNotFoundError(f"File not found: {src_path}")
+        if src_path.suffix.lower() not in {".docx", ".pdf"}:
+            raise ValueError(f"Unsupported file type: {src_path.suffix} (supported: .docx, .pdf)")
+
+        self.ensure_runtime_for_llm_task()
+        assert self.app_cfg is not None
+        assert self.deps is not None
+
+        doc_input = self.deps["document_input_service"]
+        llm_task_service = self.deps["llm_task_service"]
+        if llm_task_service is None:
+            raise RuntimeError("LLM task service is unavailable.")
+
+        loaded = doc_input.load(src_path)
+        text = "\n".join(block for block in loaded.blocks if (block or "").strip()).strip()
+        if not text:
+            raise ValueError(f"No text found in: {src_path}")
+
+        extraction_result = llm_task_service.extract_metadata_parallel(
+            app_cfg=self.app_cfg,
+            text_tasks=[text],
+        )
+        outputs = extraction_result.get("outputs", [])
+        if not outputs:
+            raise RuntimeError("Metadata extraction returned no outputs.")
+        first = outputs[0]
+        if isinstance(first, Exception):
+            raise RuntimeError(f"Metadata extraction failed: {first}")
+        if not isinstance(first, dict):
+            raise RuntimeError("Metadata extraction output is not a JSON object.")
+
+        if json_out is None:
+            json_path = self.app_cfg.assessment_paths.explained_folder / "cli" / f"{src_path.stem}.metadata.json"
+        else:
+            json_path = Path(json_out).expanduser().resolve()
+
+        result = {
+            "file": str(src_path),
+            "json_out": str(json_path),
+            "metadata": first,
+            "task_count": int(extraction_result.get("task_count", 1)),
+            "success_count": int(extraction_result.get("success_count", 1)),
+            "failure_count": int(extraction_result.get("failure_count", 0)),
+        }
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        json_path.write_text(json.dumps(result, indent=2, ensure_ascii=True), encoding="utf-8")
+        return result
+
+    def run_prompt_test(
+        self,
+        file_path: str | Path,
+        *,
+        max_concurrency: int | None = None,
+        json_out: str | Path | None = None,
+    ) -> dict[str, Any]:
+        src_path = Path(file_path).expanduser().resolve()
+        if not src_path.exists():
+            raise FileNotFoundError(f"File not found: {src_path}")
+        if src_path.suffix.lower() not in {".docx", ".pdf"}:
+            raise ValueError(f"Unsupported file type: {src_path.suffix} (supported: .docx, .pdf)")
+
+        self.ensure_runtime_for_llm_task()
+        assert self.app_cfg is not None
+        assert self.deps is not None
+
+        doc_input = self.deps["document_input_service"]
+        llm_task_service = self.deps["llm_task_service"]
+        if llm_task_service is None:
+            raise RuntimeError("LLM task service is unavailable.")
+
+        loaded = doc_input.load(src_path)
+        text = "\n".join(block for block in loaded.blocks if (block or "").strip()).strip()
+        if not text:
+            raise ValueError(f"No text found in: {src_path}")
+
+        prompt_result = llm_task_service.prompt_tester_parallel(
+            app_cfg=self.app_cfg,
+            text_tasks=[text],
+            max_concurrency=max_concurrency,
+        )
+        outputs = prompt_result.get("outputs", [])
+        if not outputs:
+            raise RuntimeError("Prompt test returned no outputs.")
+        first = outputs[0]
+        if isinstance(first, Exception):
+            raise RuntimeError(f"Prompt test failed: {first}")
+        feedback = (getattr(first, "content", "") or "").strip()
+        if not feedback:
+            raise RuntimeError("Prompt test returned empty feedback.")
+
+        if json_out is None:
+            json_path = self.app_cfg.assessment_paths.explained_folder / "cli" / f"{src_path.stem}.prompt_test.json"
+        else:
+            json_path = Path(json_out).expanduser().resolve()
+
+        result = {
+            "file": str(src_path),
+            "feedback": feedback,
+            "json_out": str(json_path),
+            "task_count": int(prompt_result.get("task_count", 1)),
+            "success_count": int(prompt_result.get("success_count", 1)),
+            "failure_count": int(prompt_result.get("failure_count", 0)),
+        }
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        json_path.write_text(json.dumps(result, indent=2, ensure_ascii=True), encoding="utf-8")
+        return result
+
     def _server_proc(self) -> Any:
         if self.deps is None:
             return None

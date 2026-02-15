@@ -76,6 +76,32 @@ def _handle_request(
                     max_concurrency=max_concurrency,
                     json_out=json_out,
                 )
+            elif req.method == "metadata":
+                file_path = req.params.get("file")
+                if not isinstance(file_path, str) or not file_path.strip():
+                    raise ValueError("file is required for metadata.")
+                json_out = req.params.get("json_out")
+                if json_out is not None and not isinstance(json_out, str):
+                    raise ValueError("json_out must be string when provided.")
+                result = session.run_metadata(
+                    file_path,
+                    json_out=json_out,
+                )
+            elif req.method == "prompt-test":
+                file_path = req.params.get("file")
+                if not isinstance(file_path, str) or not file_path.strip():
+                    raise ValueError("file is required for prompt-test.")
+                max_concurrency = req.params.get("max_concurrency")
+                if max_concurrency is not None and not isinstance(max_concurrency, int):
+                    raise ValueError("max_concurrency must be int when provided.")
+                json_out = req.params.get("json_out")
+                if json_out is not None and not isinstance(json_out, str):
+                    raise ValueError("json_out must be string when provided.")
+                result = session.run_prompt_test(
+                    file_path,
+                    max_concurrency=max_concurrency,
+                    json_out=json_out,
+                )
             else:
                 raise ValueError(f"Unknown method: {req.method}")
 

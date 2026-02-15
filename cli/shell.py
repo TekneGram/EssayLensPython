@@ -3,7 +3,13 @@ from __future__ import annotations
 import signal
 from typing import Callable
 
-from cli.output import print_help, print_llm_status, print_topic_sentence_result
+from cli.output import (
+    print_help,
+    print_llm_status,
+    print_metadata_result,
+    print_prompt_test_result,
+    print_topic_sentence_result,
+)
 from cli.parser import parse_shell_command
 from cli.runner import CliSession
 
@@ -79,6 +85,21 @@ class CliShell:
                 json_out=args.get("json_out") if args else None,
             )
             print_topic_sentence_result(result)
+            return
+        if name == "metadata":
+            result = self.session.run_metadata(
+                str(args["file"]),
+                json_out=args.get("json_out") if args else None,
+            )
+            print_metadata_result(result)
+            return
+        if name == "prompt-test":
+            result = self.session.run_prompt_test(
+                str(args["file"]),
+                max_concurrency=args.get("max_concurrency") if args else None,
+                json_out=args.get("json_out") if args else None,
+            )
+            print_prompt_test_result(result)
             return
 
         raise ValueError(f"Unknown command: {name}")

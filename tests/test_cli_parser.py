@@ -16,6 +16,16 @@ class CliParserTests(unittest.TestCase):
         self.assertEqual(cmd.name, "topic-sentence")
         self.assertEqual(cmd.args["file"], "Assessment/in/my essay.docx")
 
+    def test_parse_metadata_with_at_file(self) -> None:
+        cmd = parse_shell_command('/metadata @Assessment/in/sample.docx')
+        self.assertEqual(cmd.name, "metadata")
+        self.assertEqual(cmd.args["file"], "Assessment/in/sample.docx")
+
+    def test_parse_prompt_test_with_at_file(self) -> None:
+        cmd = parse_shell_command('/prompt-test @Assessment/in/sample.docx')
+        self.assertEqual(cmd.name, "prompt-test")
+        self.assertEqual(cmd.args["file"], "Assessment/in/sample.docx")
+
     def test_parse_llm_commands(self) -> None:
         self.assertEqual(parse_shell_command('/llm-list').name, 'llm-list')
         self.assertEqual(parse_shell_command('/llm-status').name, 'llm-status')
@@ -29,6 +39,14 @@ class CliParserTests(unittest.TestCase):
     def test_reject_unknown_command(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unknown command"):
             parse_shell_command('/bogus')
+
+    def test_reject_metadata_extra_args(self) -> None:
+        with self.assertRaisesRegex(ValueError, "only one @file"):
+            parse_shell_command("/metadata @a.docx extra")
+
+    def test_reject_prompt_test_extra_args(self) -> None:
+        with self.assertRaisesRegex(ValueError, "only one @file"):
+            parse_shell_command("/prompt-test @a.docx extra")
 
 
 if __name__ == "__main__":

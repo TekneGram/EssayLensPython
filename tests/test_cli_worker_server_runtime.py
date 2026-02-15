@@ -38,6 +38,26 @@ class CliWorkerServerRuntimeTests(unittest.TestCase):
         assert resp.error is not None
         self.assertEqual(resp.error.code, "validation_error")
 
+    def test_metadata_requires_file(self) -> None:
+        session = self._make_session()
+
+        resp, should_stop = _handle_request(session, WorkerRequest(id=6, method="metadata", params={}))
+
+        self.assertFalse(resp.ok)
+        self.assertFalse(should_stop)
+        assert resp.error is not None
+        self.assertEqual(resp.error.code, "validation_error")
+
+    def test_prompt_test_requires_file(self) -> None:
+        session = self._make_session()
+
+        resp, should_stop = _handle_request(session, WorkerRequest(id=8, method="prompt-test", params={}))
+
+        self.assertFalse(resp.ok)
+        self.assertFalse(should_stop)
+        assert resp.error is not None
+        self.assertEqual(resp.error.code, "validation_error")
+
     def test_runtime_stage_error_is_forwarded(self) -> None:
         session = self._make_session()
         session.run_topic_sentence.side_effect = RuntimeStageError(
@@ -79,6 +99,48 @@ class CliWorkerServerRuntimeTests(unittest.TestCase):
         self.assertTrue(resp.ok)
         self.assertFalse(should_stop)
         self.assertTrue(any(d.get("stage") == "worker_stdout" for d in (resp.diagnostics or [])))
+
+    def test_metadata_dispatch_success(self) -> None:
+        session = self._make_session()
+        session.run_metadata.return_value = {
+            "file": "/tmp/essay.docx",
+            "json_out": "/tmp/meta.json",
+            "metadata": {"student_name": "Ada"},
+        }
+
+        resp, should_stop = _handle_request(
+            session,
+            WorkerRequest(id=7, method="metadata", params={"file": "/tmp/essay.docx", "json_out": None}),
+        )
+
+        self.assertTrue(resp.ok)
+        self.assertFalse(should_stop)
+        session.run_metadata.assert_called_once_with("/tmp/essay.docx", json_out=None)
+
+    def test_prompt_test_dispatch_success(self) -> None:
+        session = self._make_session()
+        session.run_prompt_test.return_value = {
+            "file": "/tmp/essay.docx",
+            "feedback": "Use more causal language.",
+            "json_out": "/tmp/prompt.json",
+        }
+
+        resp, should_stop = _handle_request(
+            session,
+            WorkerRequest(
+                id=9,
+                method="prompt-test",
+                params={"file": "/tmp/essay.docx", "max_concurrency": None, "json_out": None},
+            ),
+        )
+
+        self.assertTrue(resp.ok)
+        self.assertFalse(should_stop)
+        session.run_prompt_test.assert_called_once_with(
+            "/tmp/essay.docx",
+            max_concurrency=None,
+            json_out=None,
+        )
 
 
 if __name__ == "__main__":
